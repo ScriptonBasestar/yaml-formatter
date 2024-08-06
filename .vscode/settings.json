@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "Dockerfile_*": "dockerfile",
+        "*docker-compose*!(.rule).(yml|yaml)": "dockercompose",
+        "*.rule.yaml": "yaml"
+    }
+}

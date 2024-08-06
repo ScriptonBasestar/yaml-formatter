@@ -1,0 +1,31 @@
+services:
+  redis:
+    image: bitnami/redis:7.0
+    restart: always
+    ports:
+      - "6379:6379"
+    profiles:
+      - backends
+      - all
+      - ""
+    # volumes:
+    #   - ./redis:/bitnami/redis
+    environment:
+      - REDIS_PASSWORD=passner$
+
+  postgres:
+    image: postgres:15
+    restart: always
+    volumes:
+      - ./config/postgres/init-user-bitnami.sql:/docker-entrypoint-initdb.d/00-user.sql
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_PASSWORD=passner$
+      - POSTGRES_USER=goatgres
+      - POSTGRES_DB=local_dev
+    ports:
+      - "5432:5432"
+    profiles:
+      - backends
+      - all
+      - ""
