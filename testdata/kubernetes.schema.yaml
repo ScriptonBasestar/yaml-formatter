@@ -1,0 +1,306 @@
+apiVersion:
+kind:
+metadata:
+  name:
+  namespace:
+  labels:
+  annotations:
+spec:
+  replicas:
+  selector:
+    matchLabels:
+    matchExpressions:
+  strategy:
+    type:
+    rollingUpdate:
+      maxSurge:
+      maxUnavailable:
+  template:
+    metadata:
+      name:
+      labels:
+      annotations:
+    spec:
+      containers:
+      - name:
+        image:
+        imagePullPolicy:
+        command:
+        args:
+        workingDir:
+        ports:
+        - containerPort:
+          name:
+          protocol:
+          hostPort:
+        env:
+        - name:
+          value:
+          valueFrom:
+            configMapKeyRef:
+              name:
+              key:
+            secretKeyRef:
+              name:
+              key:
+            fieldRef:
+              fieldPath:
+            resourceFieldRef:
+              resource:
+        envFrom:
+        - configMapRef:
+            name:
+        - secretRef:
+            name:
+        volumeMounts:
+        - name:
+          mountPath:
+          subPath:
+          readOnly:
+        resources:
+          requests:
+            cpu:
+            memory:
+          limits:
+            cpu:
+            memory:
+        livenessProbe:
+          httpGet:
+            path:
+            port:
+            scheme:
+          tcpSocket:
+            port:
+          exec:
+            command:
+          initialDelaySeconds:
+          periodSeconds:
+          timeoutSeconds:
+          successThreshold:
+          failureThreshold:
+        readinessProbe:
+          httpGet:
+            path:
+            port:
+            scheme:
+          tcpSocket:
+            port:
+          exec:
+            command:
+          initialDelaySeconds:
+          periodSeconds:
+          timeoutSeconds:
+          successThreshold:
+          failureThreshold:
+        startupProbe:
+          httpGet:
+            path:
+            port:
+          initialDelaySeconds:
+          periodSeconds:
+          timeoutSeconds:
+          failureThreshold:
+        securityContext:
+          runAsUser:
+          runAsGroup:
+          runAsNonRoot:
+          readOnlyRootFilesystem:
+          allowPrivilegeEscalation:
+          capabilities:
+            add:
+            drop:
+        stdin:
+        stdinOnce:
+        tty:
+        lifecycle:
+          preStop:
+            exec:
+              command:
+          postStart:
+            exec:
+              command:
+      initContainers:
+      - name:
+        image:
+      restartPolicy:
+      terminationGracePeriodSeconds:
+      activeDeadlineSeconds:
+      dnsPolicy:
+      nodeSelector:
+      serviceAccountName:
+      serviceAccount:
+      automountServiceAccountToken:
+      nodeName:
+      hostNetwork:
+      hostPID:
+      hostIPC:
+      shareProcessNamespace:
+      securityContext:
+        runAsUser:
+        runAsGroup:
+        runAsNonRoot:
+        fsGroup:
+        seLinuxOptions:
+        supplementalGroups:
+        sysctls:
+      imagePullSecrets:
+      - name:
+      hostname:
+      subdomain:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key:
+                operator:
+                values:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight:
+            preference:
+              matchExpressions:
+              - key:
+                operator:
+                values:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key:
+                operator:
+                values:
+            topologyKey:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight:
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key:
+                  operator:
+                  values:
+              topologyKey:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key:
+                operator:
+                values:
+            topologyKey:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight:
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key:
+                  operator:
+                  values:
+              topologyKey:
+      schedulerName:
+      tolerations:
+      - key:
+        operator:
+        value:
+        effect:
+        tolerationSeconds:
+      hostAliases:
+      - ip:
+        hostnames:
+      priorityClassName:
+      priority:
+      dnsConfig:
+        nameservers:
+        searches:
+        options:
+        - name:
+          value:
+      readinessGates:
+      - conditionType:
+      runtimeClassName:
+      enableServiceLinks:
+      preemptionPolicy:
+      overhead:
+      topologySpreadConstraints:
+      - maxSkew:
+        topologyKey:
+        whenUnsatisfiable:
+        labelSelector:
+          matchLabels:
+      volumes:
+      - name:
+        hostPath:
+          path:
+          type:
+        emptyDir:
+          sizeLimit:
+        configMap:
+          name:
+          items:
+          - key:
+            path:
+          defaultMode:
+        secret:
+          secretName:
+          items:
+          - key:
+            path:
+          defaultMode:
+        persistentVolumeClaim:
+          claimName:
+        nfs:
+          server:
+          path:
+        iscsi:
+          targetPortal:
+          iqn:
+          lun:
+        awsElasticBlockStore:
+          volumeID:
+          fsType:
+        azureDisk:
+          diskName:
+          diskURI:
+        azureFile:
+          secretName:
+          shareName:
+        gcePersistentDisk:
+          pdName:
+          fsType:
+        projected:
+          sources:
+          - configMap:
+              name:
+          - secret:
+              name:
+          - serviceAccountToken:
+              path:
+
+# Service resource
+---
+type:
+selector:
+ports:
+- port:
+  targetPort:
+  protocol:
+  name:
+  nodePort:
+clusterIP:
+loadBalancerIP:
+loadBalancerSourceRanges:
+externalIPs:
+sessionAffinity:
+sessionAffinityConfig:
+  clientIP:
+    timeoutSeconds:
+externalName:
+externalTrafficPolicy:
+healthCheckNodePort:
+publishNotReadyAddresses:
+ipFamily:
+clusterIPs:
+allocateLoadBalancerNodePorts:
+
+non_sort:
+  command:
+  args:

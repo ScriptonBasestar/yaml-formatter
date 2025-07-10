@@ -1,0 +1,234 @@
+---
+- name: Deploy Web Application
+  hosts: webservers
+  remote_user: deployer
+  become: yes
+  become_method: sudo
+  gather_facts: yes
+  serial: 2
+  max_fail_percentage: 10
+  vars:
+    app_name: mywebapp
+    app_version: "1.2.3"
+    app_port: 8080
+    nginx_port: 80
+    database_host: "{{ groups['dbservers'][0] }}"
+    redis_host: "{{ groups['cacheservers'][0] }}"
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+  vars_prompt:
+    - name: "deploy_env"
+      prompt: "Which environment to deploy? (staging/production)"
+      default: "staging"
+      private: no
+  pre_tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Check disk space
+      shell: df -h /
+      register: disk_usage
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if low disk space
+      fail:
+        msg: "Insufficient disk space"
+      when: disk_usage.stdout | regex_search('([0-9]+)%') | regex_replace('%', '') | int > 90
+
+  tasks:
+    - name: Create application user
+      user:
+        name: "{{ app_name }}"
+        system: yes
+        shell: /bin/bash
+        home: "/opt/{{ app_name }}"
+        create_home: yes
+      tags: [setup, user]
+
+    - name: Install required packages
+      package:
+        name:
+          - nginx
+          - nodejs
+          - npm
+          - git
+          - curl
+          - htop
+        state: present
+      tags: [packages]
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_name }}"
+        group: "{{ app_name }}"
+        mode: '0755'
+      loop:
+        - "/opt/{{ app_name }}/app"
+        - "/opt/{{ app_name }}/logs"
+        - "/var/log/{{ app_name }}"
+      tags: [setup, directories]
+
+    - name: Clone application repository
+      git:
+        repo: "https://github.com/company/{{ app_name }}.git"
+        dest: "/opt/{{ app_name }}/app"
+        version: "{{ app_version }}"
+        force: yes
+      become_user: "{{ app_name }}"
+      notify:
+        - restart application
+        - reload nginx
+      tags: [deploy, git]
+
+    - name: Install Node.js dependencies
+      npm:
+        path: "/opt/{{ app_name }}/app"
+        production: yes
+        ci: yes
+      become_user: "{{ app_name }}"
+      tags: [deploy, npm]
+
+    - name: Build application
+      command: npm run build
+      args:
+        chdir: "/opt/{{ app_name }}/app"
+      become_user: "{{ app_name }}"
+      environment:
+        NODE_ENV: production
+        DATABASE_URL: "postgresql://{{ db_user }}:{{ db_password }}@{{ database_host }}/{{ db_name }}"
+        REDIS_URL: "redis://{{ redis_host }}:6379"
+      tags: [deploy, build]
+
+    - name: Configure application
+      template:
+        src: app.config.j2
+        dest: "/opt/{{ app_name }}/app/config.json"
+        owner: "{{ app_name }}"
+        group: "{{ app_name }}"
+        mode: '0640'
+        backup: yes
+      notify: restart application
+      tags: [config]
+
+    - name: Create systemd service file
+      template:
+        src: app.service.j2
+        dest: "/etc/systemd/system/{{ app_name }}.service"
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart application
+      tags: [systemd]
+
+    - name: Configure nginx
+      template:
+        src: nginx.conf.j2
+        dest: "/etc/nginx/sites-available/{{ app_name }}"
+        backup: yes
+      notify: reload nginx
+      tags: [nginx]
+
+    - name: Enable nginx site
+      file:
+        src: "/etc/nginx/sites-available/{{ app_name }}"
+        dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+        state: link
+      notify: reload nginx
+      tags: [nginx]
+
+    - name: Remove default nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: reload nginx
+      tags: [nginx]
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      loop:
+        - nginx
+        - "{{ app_name }}"
+      tags: [services]
+
+    - name: Wait for application to be ready
+      uri:
+        url: "http://localhost:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      retries: 5
+      delay: 10
+      register: health_check
+      until: health_check.status == 200
+      tags: [health]
+
+  post_tasks:
+    - name: Verify deployment
+      uri:
+        url: "http://{{ inventory_hostname }}/api/version"
+        method: GET
+        return_content: yes
+      register: version_check
+      failed_when: app_version not in version_check.content
+      tags: [verify]
+
+    - name: Send deployment notification
+      mail:
+        to: "{{ notification_email }}"
+        subject: "Deployment completed: {{ app_name }} v{{ app_version }}"
+        body: |
+          Application {{ app_name }} version {{ app_version }} has been successfully deployed to {{ inventory_hostname }}.
+          
+          Deployment time: {{ ansible_date_time.iso8601 }}
+          Environment: {{ deploy_env }}
+          
+          Health check: {{ health_check.url }}
+      when: notification_email is defined
+      tags: [notification]
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart application
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+
+    - name: reload nginx
+      systemd:
+        name: nginx
+        state: reloaded
+
+  rescue:
+    - name: Rollback on failure
+      debug:
+        msg: "Deployment failed, initiating rollback..."
+
+    - name: Stop failed service
+      systemd:
+        name: "{{ app_name }}"
+        state: stopped
+      ignore_errors: yes
+
+    - name: Restore from backup
+      command: git checkout HEAD~1
+      args:
+        chdir: "/opt/{{ app_name }}/app"
+      become_user: "{{ app_name }}"
+
+    - name: Restart with previous version
+      systemd:
+        name: "{{ app_name }}"
+        state: started

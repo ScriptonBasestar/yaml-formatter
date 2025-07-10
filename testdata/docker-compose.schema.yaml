@@ -1,0 +1,115 @@
+version:
+services:
+  build:
+    context:
+    dockerfile:
+    args:
+  image:
+  container_name:
+  command:
+  entrypoint:
+  working_dir:
+  user:
+  ports:
+  expose:
+  volumes:
+  volumes_from:
+  volume_driver:
+  tmpfs:
+  networks:
+  network_mode:
+  links:
+  external_links:
+  environment:
+  env_file:
+  secrets:
+  depends_on:
+  restart:
+  deploy:
+    mode:
+    replicas:
+    resources:
+      limits:
+        cpus:
+        memory:
+      reservations:
+        cpus:
+        memory:
+    restart_policy:
+      condition:
+      delay:
+      max_attempts:
+    placement:
+    update_config:
+    labels:
+  labels:
+  healthcheck:
+    test:
+    interval:
+    timeout:
+    retries:
+    disable:
+  logging:
+    driver:
+    options:
+  devices:
+  privileged:
+  cap_add:
+  cap_drop:
+  security_opt:
+  read_only:
+  shm_size:
+  stdin_open:
+  tty:
+  dns:
+  dns_search:
+  extra_hosts:
+  hostname:
+  domainname:
+  mac_address:
+  pid:
+  ipc:
+  cgroup_parent:
+  cpu_shares:
+  cpu_quota:
+  cpuset:
+  mem_limit:
+  memswap_limit:
+  ulimits:
+  sysctls:
+  userns_mode:
+  stop_signal:
+  stop_grace_period:
+  extends:
+  profiles:
+
+volumes:
+  driver:
+  driver_opts:
+  external:
+    name:
+  labels:
+
+networks:
+  driver:
+  driver_opts:
+  external:
+    name:
+  labels:
+  attachable:
+  enable_ipv6:
+  ipam:
+    driver:
+    config:
+      subnet:
+      gateway:
+
+secrets:
+  file:
+  external:
+  labels:
+
+non_sort:
+  entrypoint:
+  command:
+  test:

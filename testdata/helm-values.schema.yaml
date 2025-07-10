@@ -1,0 +1,287 @@
+replicaCount:
+
+image:
+  repository:
+  pullPolicy:
+  tag:
+
+imagePullSecrets:
+  - name:
+
+nameOverride:
+fullnameOverride:
+
+serviceAccount:
+  create:
+  automount:
+  annotations:
+  name:
+
+podAnnotations:
+
+podLabels:
+
+podSecurityContext:
+  fsGroup:
+  runAsNonRoot:
+  runAsUser:
+  runAsGroup:
+  supplementalGroups:
+  sysctls:
+
+securityContext:
+  allowPrivilegeEscalation:
+  capabilities:
+    add:
+    drop:
+  readOnlyRootFilesystem:
+  runAsNonRoot:
+  runAsUser:
+  runAsGroup:
+
+service:
+  type:
+  port:
+  targetPort:
+  nodePort:
+  annotations:
+  labels:
+
+ingress:
+  enabled:
+  className:
+  annotations:
+  hosts:
+    - host:
+      paths:
+        - path:
+          pathType:
+  tls:
+    - secretName:
+      hosts:
+
+resources:
+  limits:
+    cpu:
+    memory:
+  requests:
+    cpu:
+    memory:
+
+autoscaling:
+  enabled:
+  minReplicas:
+  maxReplicas:
+  targetCPUUtilizationPercentage:
+  targetMemoryUtilizationPercentage:
+
+livenessProbe:
+  httpGet:
+    path:
+    port:
+  tcpSocket:
+    port:
+  exec:
+    command:
+  initialDelaySeconds:
+  periodSeconds:
+  timeoutSeconds:
+  successThreshold:
+  failureThreshold:
+
+readinessProbe:
+  httpGet:
+    path:
+    port:
+  tcpSocket:
+    port:
+  exec:
+    command:
+  initialDelaySeconds:
+  periodSeconds:
+  timeoutSeconds:
+  successThreshold:
+  failureThreshold:
+
+volumes:
+  - name:
+    configMap:
+      name:
+      items:
+        - key:
+          path:
+    secret:
+      secretName:
+      items:
+        - key:
+          path:
+    persistentVolumeClaim:
+      claimName:
+    emptyDir:
+    hostPath:
+      path:
+      type:
+
+volumeMounts:
+  - name:
+    mountPath:
+    subPath:
+    readOnly:
+
+nodeSelector:
+
+tolerations:
+  - key:
+    operator:
+    value:
+    effect:
+    tolerationSeconds:
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key:
+              operator:
+              values:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight:
+        preference:
+          matchExpressions:
+            - key:
+              operator:
+              values:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key:
+              operator:
+              values:
+        topologyKey:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight:
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key:
+                operator:
+                values:
+          topologyKey:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key:
+              operator:
+              values:
+        topologyKey:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight:
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key:
+                operator:
+                values:
+          topologyKey:
+
+env:
+  - name:
+    value:
+    valueFrom:
+      configMapKeyRef:
+        name:
+        key:
+      secretKeyRef:
+        name:
+        key:
+      fieldRef:
+        fieldPath:
+      resourceFieldRef:
+        resource:
+
+envFrom:
+  - configMapRef:
+      name:
+  - secretRef:
+      name:
+
+configMap:
+  create:
+  data:
+
+secrets:
+  create:
+  data:
+
+persistence:
+  enabled:
+  storageClass:
+  accessMode:
+  size:
+  annotations:
+  selector:
+
+monitoring:
+  enabled:
+  serviceMonitor:
+    enabled:
+    interval:
+    scrapeTimeout:
+    labels:
+    annotations:
+
+networkPolicy:
+  enabled:
+  policyTypes:
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+        - podSelector:
+            matchLabels:
+      ports:
+        - protocol:
+          port:
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+        - podSelector:
+            matchLabels:
+      ports:
+        - protocol:
+          port:
+
+podDisruptionBudget:
+  enabled:
+  minAvailable:
+  maxUnavailable:
+
+deployment:
+  strategy:
+    type:
+    rollingUpdate:
+      maxSurge:
+      maxUnavailable:
+
+hpa:
+  enabled:
+  minReplicas:
+  maxReplicas:
+  metrics:
+    - type:
+      resource:
+        name:
+        target:
+          type:
+          averageUtilization:
+
+pdb:
+  enabled:
+  minAvailable:
+  maxUnavailable:
+
+non_sort:

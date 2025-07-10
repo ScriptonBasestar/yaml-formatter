@@ -1,0 +1,124 @@
+name:
+run-name:
+
+on:
+  push:
+    branches:
+    branches-ignore:
+    tags:
+    tags-ignore:
+    paths:
+    paths-ignore:
+  pull_request:
+    branches:
+    branches-ignore:
+    paths:
+    paths-ignore:
+    types:
+  pull_request_target:
+    branches:
+    types:
+  schedule:
+    - cron:
+  workflow_dispatch:
+    inputs:
+  workflow_call:
+    inputs:
+    outputs:
+    secrets:
+  repository_dispatch:
+    types:
+  release:
+    types:
+  issues:
+    types:
+  issue_comment:
+    types:
+  watch:
+    types:
+
+env:
+
+defaults:
+  run:
+    shell:
+    working-directory:
+
+concurrency:
+  group:
+  cancel-in-progress:
+
+permissions:
+  actions:
+  checks:
+  contents:
+  deployments:
+  id-token:
+  issues:
+  discussions:
+  packages:
+  pages:
+  pull-requests:
+  repository-projects:
+  security-events:
+  statuses:
+
+jobs:
+  job_id:
+    name:
+    runs-on:
+    permissions:
+    needs:
+    if:
+    strategy:
+      matrix:
+      fail-fast:
+      max-parallel:
+    continue-on-error:
+    timeout-minutes:
+    environment:
+      name:
+      url:
+    concurrency:
+      group:
+      cancel-in-progress:
+    outputs:
+    env:
+    defaults:
+      run:
+        shell:
+        working-directory:
+    services:
+      service_id:
+        image:
+        credentials:
+          username:
+          password:
+        env:
+        ports:
+        volumes:
+        options:
+    container:
+      image:
+      credentials:
+        username:
+        password:
+      env:
+      ports:
+      volumes:
+      options:
+    steps:
+    - name:
+      id:
+      if:
+      uses:
+      with:
+      run:
+      shell:
+      working-directory:
+      env:
+      continue-on-error:
+      timeout-minutes:
+
+non_sort:
+  run:
