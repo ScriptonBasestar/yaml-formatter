@@ -5,23 +5,31 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Writer handles writing formatted YAML content
 type Writer struct {
-	indent           int
-	lineWidth        int
-	preserveComments bool
+	indent               int
+	lineWidth            int
+	preserveComments     bool
+	preserveUnicode      bool
+	escapeSpecialChars   bool
+	normalizeLineEndings bool
 }
 
 // NewWriter creates a new YAML writer
 func NewWriter() *Writer {
 	return &Writer{
-		indent:           2,
-		lineWidth:        80,
-		preserveComments: true,
+		indent:               2,
+		lineWidth:            80,
+		preserveComments:     true,
+		preserveUnicode:      true,
+		escapeSpecialChars:   false,
+		normalizeLineEndings: true,
 	}
 }
 
@@ -43,16 +51,45 @@ func (w *Writer) SetPreserveComments(preserve bool) *Writer {
 	return w
 }
 
+// SetPreserveUnicode sets whether to preserve Unicode characters
+func (w *Writer) SetPreserveUnicode(preserve bool) *Writer {
+	w.preserveUnicode = preserve
+	return w
+}
+
+// SetEscapeSpecialChars sets whether to escape special characters
+func (w *Writer) SetEscapeSpecialChars(escape bool) *Writer {
+	w.escapeSpecialChars = escape
+	return w
+}
+
+// SetNormalizeLineEndings sets whether to normalize line endings
+func (w *Writer) SetNormalizeLineEndings(normalize bool) *Writer {
+	w.normalizeLineEndings = normalize
+	return w
+}
+
 // WriteNode writes a single YAML node to the provided writer
 func (w *Writer) WriteNode(writer io.Writer, node *yaml.Node) error {
-	encoder := yaml.NewEncoder(writer)
+	// Pre-process the node for special character handling
+	processedNode := w.preprocessNode(node)
+
+	var buf bytes.Buffer
+	encoder := yaml.NewEncoder(&buf)
 	defer encoder.Close()
 
 	// Configure encoder options
 	encoder.SetIndent(w.indent)
 
-	if err := encoder.Encode(node); err != nil {
+	if err := encoder.Encode(processedNode); err != nil {
 		return fmt.Errorf("failed to encode YAML node: %w", err)
+	}
+
+	// Post-process the output for special character handling
+	output := w.postprocessOutput(buf.Bytes())
+
+	if _, err := writer.Write(output); err != nil {
+		return fmt.Errorf("failed to write processed output: %w", err)
 	}
 
 	return nil
@@ -257,4 +294,182 @@ func (fs *FormatStats) String() string {
 		fs.OriginalLines, fs.FormattedLines,
 		fs.OriginalBytes, fs.FormattedBytes,
 		fs.LinesChanged)
+}
+
+// preprocessNode processes a YAML node to handle special characters before encoding
+func (w *Writer) preprocessNode(node *yaml.Node) *yaml.Node {
+	if node == nil {
+		return nil
+	}
+
+	// Create a deep copy of the node
+	processed := &yaml.Node{
+		Kind:        node.Kind,
+		Style:       node.Style,
+		Tag:         node.Tag,
+		Value:       w.preprocessValue(node.Value),
+		Anchor:      node.Anchor,
+		Alias:       node.Alias,
+		Content:     make([]*yaml.Node, len(node.Content)),
+		HeadComment: w.preprocessComment(node.HeadComment),
+		LineComment: w.preprocessComment(node.LineComment),
+		FootComment: w.preprocessComment(node.FootComment),
+		Line:        node.Line,
+		Column:      node.Column,
+	}
+
+	// Recursively process child nodes
+	for i, child := range node.Content {
+		processed.Content[i] = w.preprocessNode(child)
+	}
+
+	return processed
+}
+
+// preprocessValue handles special character processing for YAML values
+func (w *Writer) preprocessValue(value string) string {
+	if value == "" {
+		return value
+	}
+
+	// Handle Unicode preservation
+	if w.preserveUnicode {
+		// Ensure proper UTF-8 encoding
+		if !utf8.ValidString(value) {
+			// Convert invalid UTF-8 to replacement characters
+			value = strings.ToValidUTF8(value, "�")
+		}
+	}
+
+	// Handle special character escaping if enabled
+	if w.escapeSpecialChars {
+		value = w.escapeYAMLSpecialChars(value)
+	}
+
+	return value
+}
+
+// preprocessComment handles special character processing for YAML comments
+func (w *Writer) preprocessComment(comment string) string {
+	if comment == "" {
+		return comment
+	}
+
+	// Ensure comments are valid UTF-8
+	if !utf8.ValidString(comment) {
+		comment = strings.ToValidUTF8(comment, "�")
+	}
+
+	return comment
+}
+
+// escapeYAMLSpecialChars escapes special characters in YAML values
+func (w *Writer) escapeYAMLSpecialChars(value string) string {
+	// Define characters that might need special handling in YAML
+	needsQuoting := false
+
+	// Check for characters that require quoting
+	for _, r := range value {
+		if r == ':' || r == '{' || r == '}' || r == '[' || r == ']' ||
+			r == ',' || r == '#' || r == '&' || r == '*' || r == '!' ||
+			r == '|' || r == '>' || r == '\'' || r == '"' ||
+			r == '%' || r == '@' || r == '`' {
+			needsQuoting = true
+			break
+		}
+
+		// Check for control characters
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			needsQuoting = true
+			break
+		}
+	}
+
+	// If the value needs quoting and doesn't already have it
+	if needsQuoting && !w.isQuoted(value) {
+		// Use double quotes and escape internal quotes
+		escaped := strings.ReplaceAll(value, "\\", "\\\\")
+		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+		return "\"" + escaped + "\""
+	}
+
+	return value
+}
+
+// isQuoted checks if a string is already quoted
+func (w *Writer) isQuoted(value string) bool {
+	if len(value) < 2 {
+		return false
+	}
+
+	return (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
+		(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'"))
+}
+
+// postprocessOutput handles post-processing of the encoded YAML output
+func (w *Writer) postprocessOutput(content []byte) []byte {
+	output := string(content)
+
+	// Normalize line endings if enabled
+	if w.normalizeLineEndings {
+		output = w.doNormalizeLineEndings(output)
+	}
+
+	// Enhance Unicode handling
+	output = w.enhanceUnicodeOutput(output)
+
+	// Handle emoji preservation
+	output = w.preserveEmojis(output)
+
+	return []byte(output)
+}
+
+// doNormalizeLineEndings normalizes line endings to \n
+func (w *Writer) doNormalizeLineEndings(content string) string {
+	// Replace Windows line endings
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	// Replace old Mac line endings
+	content = strings.ReplaceAll(content, "\r", "\n")
+	return content
+}
+
+// enhanceUnicodeOutput enhances Unicode character handling in output
+func (w *Writer) enhanceUnicodeOutput(content string) string {
+	if !w.preserveUnicode {
+		return content
+	}
+
+	// Ensure the content is valid UTF-8
+	if !utf8.ValidString(content) {
+		content = strings.ToValidUTF8(content, "�")
+	}
+
+	return content
+}
+
+// preserveEmojis ensures emojis are properly preserved in the output
+func (w *Writer) preserveEmojis(content string) string {
+	// Convert Unicode escape sequences back to actual emoji characters if desired
+	if w.preserveUnicode {
+		// This is a basic implementation - in practice, you might want more sophisticated handling
+		// For now, we'll leave Unicode escapes as-is since they're valid YAML
+		return content
+	}
+
+	return content
+}
+
+// GetPreserveUnicode returns whether Unicode preservation is enabled
+func (w *Writer) GetPreserveUnicode() bool {
+	return w.preserveUnicode
+}
+
+// GetEscapeSpecialChars returns whether special character escaping is enabled
+func (w *Writer) GetEscapeSpecialChars() bool {
+	return w.escapeSpecialChars
+}
+
+// GetNormalizeLineEndings returns whether line ending normalization is enabled
+func (w *Writer) GetNormalizeLineEndings() bool {
+	return w.normalizeLineEndings
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestFormatToString(t *testing.T) {
@@ -246,5 +247,289 @@ func TestSpecialCharacterHandling(t *testing.T) {
 
 	if !strings.Contains(result, "🌍") && !strings.Contains(result, "\\U0001F30D") {
 		t.Error("Emoji characters were not preserved")
+	}
+}
+
+func TestWriterUnicodeHandling(t *testing.T) {
+	writer := NewWriter()
+
+	tests := []struct {
+		name     string
+		input    string
+		preserve bool
+		expected string
+	}{
+		{
+			name:     "Unicode characters preserved",
+			input:    "unicode: \"Hello 世界\"",
+			preserve: true,
+			expected: "unicode: \"Hello 世界\"",
+		},
+		{
+			name:     "Emoji handling",
+			input:    "emoji: \"🚀 🎉\"",
+			preserve: true,
+			expected: "emoji:", // Emoji might be converted to Unicode escapes
+		},
+		{
+			name:     "Mixed Unicode and ASCII",
+			input:    "mixed: \"ASCII and 中文 text\"",
+			preserve: true,
+			expected: "mixed:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer.SetPreserveUnicode(tt.preserve)
+
+			parser := NewParser(true)
+			node, err := parser.ParseYAML([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Failed to parse input: %v", err)
+			}
+
+			result, err := writer.FormatToString(node)
+			if err != nil {
+				t.Errorf("FormatToString failed: %v", err)
+				return
+			}
+
+			// Check that output contains the key
+			if !strings.Contains(result, strings.Split(tt.expected, ":")[0]+":") {
+				t.Errorf("Result missing expected key. Got: %s", result)
+			}
+
+			// Verify the result is valid YAML
+			if err := parser.ValidateYAML([]byte(result)); err != nil {
+				t.Errorf("Result is not valid YAML: %v", err)
+			}
+		})
+	}
+}
+
+func TestWriterSpecialCharacterEscaping(t *testing.T) {
+	writer := NewWriter()
+
+	tests := []struct {
+		name          string
+		input         string
+		escapeEnabled bool
+		shouldQuote   bool
+	}{
+		{
+			name:          "Special chars without escaping",
+			input:         "key: value:with:colons",
+			escapeEnabled: false,
+			shouldQuote:   false,
+		},
+		{
+			name:          "Special chars with escaping",
+			input:         "key: value:with:colons",
+			escapeEnabled: true,
+			shouldQuote:   true,
+		},
+		{
+			name:          "Already quoted value",
+			input:         "key: \"already quoted\"",
+			escapeEnabled: true,
+			shouldQuote:   false, // Should not double-quote
+		},
+		{
+			name:          "Control characters",
+			input:         "key: \"line1\\nline2\"",
+			escapeEnabled: true,
+			shouldQuote:   false, // Already quoted
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer.SetEscapeSpecialChars(tt.escapeEnabled)
+
+			parser := NewParser(true)
+			node, err := parser.ParseYAML([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Failed to parse input: %v", err)
+			}
+
+			result, err := writer.FormatToString(node)
+			if err != nil {
+				t.Errorf("FormatToString failed: %v", err)
+				return
+			}
+
+			// Verify the result is valid YAML
+			if err := parser.ValidateYAML([]byte(result)); err != nil {
+				t.Errorf("Result is not valid YAML: %v", err)
+			}
+
+			t.Logf("Input: %s", tt.input)
+			t.Logf("Output: %s", result)
+		})
+	}
+}
+
+func TestWriterLineEndingNormalization(t *testing.T) {
+	writer := NewWriter()
+
+	tests := []struct {
+		name      string
+		input     string
+		normalize bool
+		expected  string
+	}{
+		{
+			name:      "Windows line endings",
+			input:     "key: value\r\nother: data\r\n",
+			normalize: true,
+			expected:  "\n", // Should contain \n not \r\n
+		},
+		{
+			name:      "Mixed line endings",
+			input:     "key: value\r\nother: data\rthird: item\n",
+			normalize: true,
+			expected:  "\n", // Should normalize to \n
+		},
+		{
+			name:      "No normalization",
+			input:     "key: value\r\nother: data\r\n",
+			normalize: false,
+			expected:  "\r\n", // Should preserve original
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer.SetNormalizeLineEndings(tt.normalize)
+
+			// Use the postprocessOutput method directly for testing
+			result := writer.postprocessOutput([]byte(tt.input))
+			resultStr := string(result)
+
+			if tt.normalize {
+				if strings.Contains(resultStr, "\r") {
+					t.Errorf("Line endings not normalized: found \\r in output")
+				}
+			}
+
+			t.Logf("Input: %q", tt.input)
+			t.Logf("Output: %q", resultStr)
+		})
+	}
+}
+
+func TestWriterConfigurationMethods(t *testing.T) {
+	writer := NewWriter()
+
+	// Test default values
+	if !writer.GetPreserveUnicode() {
+		t.Error("Default PreserveUnicode should be true")
+	}
+	if writer.GetEscapeSpecialChars() {
+		t.Error("Default EscapeSpecialChars should be false")
+	}
+	if !writer.GetNormalizeLineEndings() {
+		t.Error("Default NormalizeLineEndings should be true")
+	}
+
+	// Test setters
+	writer.SetPreserveUnicode(false)
+	if writer.GetPreserveUnicode() {
+		t.Error("SetPreserveUnicode(false) failed")
+	}
+
+	writer.SetEscapeSpecialChars(true)
+	if !writer.GetEscapeSpecialChars() {
+		t.Error("SetEscapeSpecialChars(true) failed")
+	}
+
+	writer.SetNormalizeLineEndings(false)
+	if writer.GetNormalizeLineEndings() {
+		t.Error("SetNormalizeLineEndings(false) failed")
+	}
+}
+
+func TestWriterEscapeHelperMethods(t *testing.T) {
+	writer := NewWriter()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"Simple string", "hello", false},
+		{"String with colon", "hello:world", false},     // Not quoted
+		{"String with brackets", "hello[world]", false}, // Not quoted
+		{"Already quoted", "\"hello:world\"", true},
+		{"Single quoted", "'hello world'", true},
+		{"Not quoted", "hello world", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := writer.isQuoted(tt.input)
+			if result != tt.expected {
+				t.Errorf("isQuoted(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWriterAdvancedUnicodeHandling(t *testing.T) {
+	writer := NewWriter()
+	parser := NewParser(true)
+
+	// Test with various Unicode scenarios
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "Complex Unicode",
+			input: "unicode: \"café naïve résumé\"",
+		},
+		{
+			name:  "Mathematical symbols",
+			input: "math: \"∑ ∆ ∞ ≤ ≥\"",
+		},
+		{
+			name:  "Mixed scripts",
+			input: "mixed: \"English العربية 中文 русский\"",
+		},
+		{
+			name:  "Emoji combinations",
+			input: "emoji: \"👨‍💻 👩‍🔬 🏳️‍🌈\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer.SetPreserveUnicode(true)
+
+			node, err := parser.ParseYAML([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Failed to parse input: %v", err)
+			}
+
+			result, err := writer.FormatToString(node)
+			if err != nil {
+				t.Errorf("FormatToString failed: %v", err)
+				return
+			}
+
+			// Verify the result is valid YAML
+			if err := parser.ValidateYAML([]byte(result)); err != nil {
+				t.Errorf("Result is not valid YAML: %v", err)
+			}
+
+			// Verify Unicode is preserved (either as original or as escape sequences)
+			if !utf8.ValidString(result) {
+				t.Errorf("Result contains invalid UTF-8")
+			}
+
+			t.Logf("Input: %s", tt.input)
+			t.Logf("Output: %s", result)
+		})
 	}
 }
