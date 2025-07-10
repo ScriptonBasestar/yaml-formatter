@@ -81,7 +81,7 @@ sb-yaml/
 - 📁 **설정 파일** 자동 탐지 (`~/.sb-yaml/config.yaml`)
 - 🌍 **환경 변수** 지원 (`SB_YAML_SCHEMA_DIR`)
 - ⚙️ **플래그 바인딩** 자동화
-
+2
 **대안:**
 - `urfave/cli`: 단순하지만 기능 제한적
 - `spf13/pflag`: 저수준, 보일러플레이트 많음
