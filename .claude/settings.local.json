@@ -7,7 +7,10 @@
       "Bash(./sb-yaml:*)",
       "Bash(go test:*)",
       "Bash(go run:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(go mod:*)",
+      "Bash(go fmt:*)",
+      "Bash(go vet:*)"
     ],
     "deny": []
   }

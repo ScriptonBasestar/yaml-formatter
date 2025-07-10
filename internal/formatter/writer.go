@@ -11,16 +11,16 @@ import (
 
 // Writer handles writing formatted YAML content
 type Writer struct {
-	indent      int
-	lineWidth   int
+	indent           int
+	lineWidth        int
 	preserveComments bool
 }
 
 // NewWriter creates a new YAML writer
 func NewWriter() *Writer {
 	return &Writer{
-		indent:      2,
-		lineWidth:   80,
+		indent:           2,
+		lineWidth:        80,
 		preserveComments: true,
 	}
 }
@@ -47,14 +47,14 @@ func (w *Writer) SetPreserveComments(preserve bool) *Writer {
 func (w *Writer) WriteNode(writer io.Writer, node *yaml.Node) error {
 	encoder := yaml.NewEncoder(writer)
 	defer encoder.Close()
-	
+
 	// Configure encoder options
 	encoder.SetIndent(w.indent)
-	
+
 	if err := encoder.Encode(node); err != nil {
 		return fmt.Errorf("failed to encode YAML node: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -67,65 +67,65 @@ func (w *Writer) WriteNodes(writer io.Writer, nodes []*yaml.Node) error {
 				return fmt.Errorf("failed to write document separator: %w", err)
 			}
 		}
-		
+
 		if err := w.WriteNode(writer, node); err != nil {
 			return fmt.Errorf("failed to write document %d: %w", i, err)
 		}
 	}
-	
+
 	return nil
 }
 
 // FormatToString formats a YAML node and returns it as a string
 func (w *Writer) FormatToString(node *yaml.Node) (string, error) {
 	var buf bytes.Buffer
-	
+
 	if err := w.WriteNode(&buf, node); err != nil {
 		return "", err
 	}
-	
+
 	return buf.String(), nil
 }
 
 // FormatNodesToString formats multiple YAML nodes and returns them as a string
 func (w *Writer) FormatNodesToString(nodes []*yaml.Node) (string, error) {
 	var buf bytes.Buffer
-	
+
 	if err := w.WriteNodes(&buf, nodes); err != nil {
 		return "", err
 	}
-	
+
 	return buf.String(), nil
 }
 
 // FormatBytes formats YAML content provided as bytes
 func (w *Writer) FormatBytes(content []byte) ([]byte, error) {
 	parser := NewParser(w.preserveComments)
-	
+
 	// Check if it's a multi-document YAML
 	if parser.IsMultiDocument(content) {
 		nodes, err := parser.ParseMultiDocument(content)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse multi-document YAML: %w", err)
 		}
-		
+
 		result, err := w.FormatNodesToString(nodes)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return []byte(result), nil
 	} else {
 		node, err := parser.ParseYAML(content)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse YAML: %w", err)
 		}
-		
+
 		result, err := w.FormatToString(node)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return []byte(result), nil
 	}
 }
@@ -135,7 +135,7 @@ func (w *Writer) CompareFormatted(original, formatted []byte) bool {
 	// Normalize whitespace for comparison
 	normalizedOriginal := w.normalizeYAML(string(original))
 	normalizedFormatted := w.normalizeYAML(string(formatted))
-	
+
 	return normalizedOriginal == normalizedFormatted
 }
 
@@ -143,7 +143,7 @@ func (w *Writer) CompareFormatted(original, formatted []byte) bool {
 func (w *Writer) normalizeYAML(content string) string {
 	lines := strings.Split(content, "\n")
 	var normalized []string
-	
+
 	for _, line := range lines {
 		// Trim trailing whitespace but preserve structure
 		trimmed := strings.TrimRight(line, " \t")
@@ -151,12 +151,12 @@ func (w *Writer) normalizeYAML(content string) string {
 			normalized = append(normalized, trimmed)
 		}
 	}
-	
+
 	// Remove trailing empty lines
 	for len(normalized) > 0 && normalized[len(normalized)-1] == "" {
 		normalized = normalized[:len(normalized)-1]
 	}
-	
+
 	return strings.Join(normalized, "\n")
 }
 
@@ -195,7 +195,7 @@ func (w *Writer) WriteToFile(content []byte, filePath string) error {
 func (w *Writer) CalculateStats(original, formatted []byte) *FormatStats {
 	originalLines := strings.Split(string(original), "\n")
 	formattedLines := strings.Split(string(formatted), "\n")
-	
+
 	stats := &FormatStats{
 		OriginalLines:  len(originalLines),
 		FormattedLines: len(formattedLines),
@@ -203,10 +203,10 @@ func (w *Writer) CalculateStats(original, formatted []byte) *FormatStats {
 		FormattedBytes: len(formatted),
 		Changed:        !bytes.Equal(original, formatted),
 	}
-	
+
 	// Calculate line differences
 	stats.LinesChanged = w.countChangedLines(originalLines, formattedLines)
-	
+
 	return stats
 }
 
@@ -216,35 +216,35 @@ func (w *Writer) countChangedLines(original, formatted []string) int {
 	if len(formatted) > maxLen {
 		maxLen = len(formatted)
 	}
-	
+
 	changed := 0
 	for i := 0; i < maxLen; i++ {
 		origLine := ""
 		formattedLine := ""
-		
+
 		if i < len(original) {
 			origLine = original[i]
 		}
 		if i < len(formatted) {
 			formattedLine = formatted[i]
 		}
-		
+
 		if origLine != formattedLine {
 			changed++
 		}
 	}
-	
+
 	return changed
 }
 
 // FormatStats contains statistics about formatting changes
 type FormatStats struct {
-	OriginalLines   int
-	FormattedLines  int
-	OriginalBytes   int
-	FormattedBytes  int
-	LinesChanged    int
-	Changed         bool
+	OriginalLines  int
+	FormattedLines int
+	OriginalBytes  int
+	FormattedBytes int
+	LinesChanged   int
+	Changed        bool
 }
 
 // String returns a string representation of the format statistics
@@ -252,7 +252,7 @@ func (fs *FormatStats) String() string {
 	if !fs.Changed {
 		return "No changes needed"
 	}
-	
+
 	return fmt.Sprintf("Lines: %d→%d, Bytes: %d→%d, Changed: %d lines",
 		fs.OriginalLines, fs.FormattedLines,
 		fs.OriginalBytes, fs.FormattedBytes,

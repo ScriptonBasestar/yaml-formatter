@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"yaml-formatter/internal/schema"
 	"gopkg.in/yaml.v3"
+	"yaml-formatter/internal/schema"
 )
 
 // Reorderer handles reordering YAML nodes according to a schema
@@ -27,12 +27,12 @@ func (r *Reorderer) ReorderNode(node *yaml.Node, path string) error {
 	if node == nil {
 		return fmt.Errorf("node cannot be nil")
 	}
-	
+
 	// Skip document nodes
 	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
 		return r.ReorderNode(node.Content[0], path)
 	}
-	
+
 	switch node.Kind {
 	case yaml.MappingNode:
 		return r.reorderMappingNode(node, path)
@@ -49,35 +49,35 @@ func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
 	if len(node.Content)%2 != 0 {
 		return fmt.Errorf("mapping node has odd number of children")
 	}
-	
+
 	// Get the key order from schema
 	keyOrder := r.schema.GetKeyOrder(path)
 	if len(keyOrder) == 0 {
 		// No specific order defined, keep existing order but still process children
 		return r.processChildren(node, path)
 	}
-	
+
 	// Create a map of key-value pairs for easier manipulation
 	pairs := make(map[string]*KeyValuePair)
 	var existingKeys []string
-	
+
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valueNode := node.Content[i+1]
-		
+
 		pair := &KeyValuePair{
 			Key:   keyNode,
 			Value: valueNode,
 		}
-		
+
 		pairs[keyNode.Value] = pair
 		existingKeys = append(existingKeys, keyNode.Value)
 	}
-	
+
 	// Create new content array with reordered keys
 	var newContent []*yaml.Node
 	var processedKeys []string
-	
+
 	// First, add keys in schema order
 	for _, key := range keyOrder {
 		if pair, exists := pairs[key]; exists {
@@ -85,7 +85,7 @@ func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
 			processedKeys = append(processedKeys, key)
 		}
 	}
-	
+
 	// Then add any remaining keys that weren't in the schema
 	for _, key := range existingKeys {
 		if !contains(processedKeys, key) {
@@ -94,10 +94,10 @@ func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
 			processedKeys = append(processedKeys, key)
 		}
 	}
-	
+
 	// Update the node's content
 	node.Content = newContent
-	
+
 	// Recursively process child nodes
 	return r.processChildren(node, path)
 }
@@ -112,7 +112,7 @@ func (r *Reorderer) reorderSequenceNode(node *yaml.Node, path string) error {
 			return fmt.Errorf("failed to reorder sequence item %d: %w", i, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -121,29 +121,29 @@ func (r *Reorderer) processChildren(node *yaml.Node, path string) error {
 	if node.Kind != yaml.MappingNode {
 		return nil
 	}
-	
+
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valueNode := node.Content[i+1]
-		
+
 		// Check if this key should not be sorted
 		if r.schema.IsNonSortKey(keyNode.Value) {
 			continue
 		}
-		
+
 		// Build child path
 		childPath := path
 		if childPath != "" {
 			childPath += "."
 		}
 		childPath += keyNode.Value
-		
+
 		// Recursively process the value node
 		if err := r.ReorderNode(valueNode, childPath); err != nil {
 			return fmt.Errorf("failed to reorder child %s: %w", keyNode.Value, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -158,15 +158,15 @@ func (r *Reorderer) SortBySchema(pairs []*KeyValuePair, keyOrder []string) {
 	sort.Slice(pairs, func(i, j int) bool {
 		keyI := pairs[i].Key.Value
 		keyJ := pairs[j].Key.Value
-		
+
 		indexI := indexOf(keyOrder, keyI)
 		indexJ := indexOf(keyOrder, keyJ)
-		
+
 		// If both keys are in the schema order
 		if indexI != -1 && indexJ != -1 {
 			return indexI < indexJ
 		}
-		
+
 		// If only one key is in the schema order, prioritize it
 		if indexI != -1 {
 			return true
@@ -174,7 +174,7 @@ func (r *Reorderer) SortBySchema(pairs []*KeyValuePair, keyOrder []string) {
 		if indexJ != -1 {
 			return false
 		}
-		
+
 		// If neither key is in the schema order, maintain lexicographic order
 		return keyI < keyJ
 	})
@@ -185,12 +185,12 @@ func (r *Reorderer) CheckOrder(node *yaml.Node, path string) (bool, error) {
 	if node == nil {
 		return true, nil
 	}
-	
+
 	// Skip document nodes
 	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
 		return r.CheckOrder(node.Content[0], path)
 	}
-	
+
 	switch node.Kind {
 	case yaml.MappingNode:
 		return r.checkMappingOrder(node, path)
@@ -206,19 +206,19 @@ func (r *Reorderer) checkMappingOrder(node *yaml.Node, path string) (bool, error
 	if len(node.Content)%2 != 0 {
 		return false, fmt.Errorf("mapping node has odd number of children")
 	}
-	
+
 	keyOrder := r.schema.GetKeyOrder(path)
 	if len(keyOrder) == 0 {
 		// No specific order defined, check children
 		return r.checkChildrenOrder(node, path)
 	}
-	
+
 	// Get current key order
 	var currentKeys []string
 	for i := 0; i < len(node.Content); i += 2 {
 		currentKeys = append(currentKeys, node.Content[i].Value)
 	}
-	
+
 	// Check if schema-defined keys are in the right relative order
 	// We ignore extra keys not in the schema
 	schemaKeysInOrder := make([]string, 0)
@@ -227,7 +227,7 @@ func (r *Reorderer) checkMappingOrder(node *yaml.Node, path string) (bool, error
 			schemaKeysInOrder = append(schemaKeysInOrder, key)
 		}
 	}
-	
+
 	// Build expected order for only the schema keys present
 	expectedSchemaOrder := make([]string, 0)
 	for _, key := range keyOrder {
@@ -235,18 +235,18 @@ func (r *Reorderer) checkMappingOrder(node *yaml.Node, path string) (bool, error
 			expectedSchemaOrder = append(expectedSchemaOrder, key)
 		}
 	}
-	
+
 	// Check if schema keys are in the right order
 	if len(schemaKeysInOrder) != len(expectedSchemaOrder) {
 		return false, nil
 	}
-	
+
 	for i, key := range schemaKeysInOrder {
 		if key != expectedSchemaOrder[i] {
 			return false, nil
 		}
 	}
-	
+
 	// Check children recursively
 	return r.checkChildrenOrder(node, path)
 }
@@ -261,7 +261,7 @@ func (r *Reorderer) checkSequenceOrder(node *yaml.Node, path string) (bool, erro
 			return false, nil
 		}
 	}
-	
+
 	return true, nil
 }
 
@@ -270,28 +270,28 @@ func (r *Reorderer) checkChildrenOrder(node *yaml.Node, path string) (bool, erro
 	if node.Kind != yaml.MappingNode {
 		return true, nil
 	}
-	
+
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valueNode := node.Content[i+1]
-		
+
 		if r.schema.IsNonSortKey(keyNode.Value) {
 			continue
 		}
-		
+
 		childPath := path
 		if childPath != "" {
 			childPath += "."
 		}
 		childPath += keyNode.Value
-		
+
 		if ordered, err := r.CheckOrder(valueNode, childPath); err != nil {
 			return false, err
 		} else if !ordered {
 			return false, nil
 		}
 	}
-	
+
 	return true, nil
 }
 
@@ -299,7 +299,7 @@ func (r *Reorderer) checkChildrenOrder(node *yaml.Node, path string) (bool, erro
 func (r *Reorderer) buildExpectedOrder(currentKeys, schemaOrder []string) []string {
 	var expected []string
 	processed := make(map[string]bool)
-	
+
 	// Add keys in schema order
 	for _, key := range schemaOrder {
 		if contains(currentKeys, key) {
@@ -307,14 +307,14 @@ func (r *Reorderer) buildExpectedOrder(currentKeys, schemaOrder []string) []stri
 			processed[key] = true
 		}
 	}
-	
+
 	// Add remaining keys that weren't in schema
 	for _, key := range currentKeys {
 		if !processed[key] {
 			expected = append(expected, key)
 		}
 	}
-	
+
 	return expected
 }
 

@@ -1,7 +1,10 @@
 package formatter
 
 import (
+	"bytes"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"yaml-formatter/internal/schema"
 )
@@ -19,7 +22,7 @@ func NewFormatter(s *schema.Schema) *Formatter {
 	parser := NewParser(true) // Preserve comments by default
 	writer := NewWriter()
 	reorderer := NewReorderer(s, parser)
-	
+
 	return &Formatter{
 		parser:    parser,
 		reorderer: reorderer,
@@ -28,18 +31,126 @@ func NewFormatter(s *schema.Schema) *Formatter {
 	}
 }
 
+// handleEdgeCases handles special edge cases that don't require full parsing
+func (f *Formatter) handleEdgeCases(content []byte) ([]byte, bool) {
+	// Handle empty files
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 {
+		return content, true
+	}
+
+	// Handle whitespace-only files (preserve original whitespace)
+	if f.isWhitespaceOnly(content) {
+		return content, true
+	}
+
+	// Handle comments-only files
+	if f.isCommentsOnly(content) {
+		return content, true
+	}
+
+	// Handle single scalar value files
+	if f.isSingleScalar(content) {
+		return f.formatSingleScalar(content), true
+	}
+
+	return nil, false
+}
+
+// isWhitespaceOnly checks if content contains only whitespace characters
+func (f *Formatter) isWhitespaceOnly(content []byte) bool {
+	for _, b := range content {
+		if b != ' ' && b != '\t' && b != '\n' && b != '\r' {
+			return false
+		}
+	}
+	return len(content) > 0
+}
+
+// isCommentsOnly checks if content contains only YAML comments
+func (f *Formatter) isCommentsOnly(content []byte) bool {
+	lines := strings.Split(string(content), "\n")
+	hasNonEmptyLine := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		hasNonEmptyLine = true
+
+		// If line doesn't start with #, it's not a comment-only file
+		if !strings.HasPrefix(trimmed, "#") {
+			return false
+		}
+	}
+
+	return hasNonEmptyLine
+}
+
+// isSingleScalar checks if content contains only a single scalar value
+func (f *Formatter) isSingleScalar(content []byte) bool {
+	trimmed := strings.TrimSpace(string(content))
+	if trimmed == "" {
+		return false
+	}
+
+	// Simple heuristic: if it doesn't contain YAML structure characters
+	// and doesn't start with comment, it might be a single scalar
+	if !strings.Contains(trimmed, ":") &&
+		!strings.Contains(trimmed, "-") &&
+		!strings.Contains(trimmed, "[") &&
+		!strings.Contains(trimmed, "{") &&
+		!strings.HasPrefix(trimmed, "#") &&
+		!strings.Contains(trimmed, "\n---") {
+
+		// Additional check: try to parse as single value
+		return f.validateSingleScalar(content)
+	}
+
+	return false
+}
+
+// validateSingleScalar validates that content is a valid single scalar value
+func (f *Formatter) validateSingleScalar(content []byte) bool {
+	// Use regex to match simple scalar patterns
+	scalarPattern := regexp.MustCompile(`^[\s]*[^:\-\[\{\#\n][^\n]*[\s]*$`)
+	return scalarPattern.Match(content)
+}
+
+// formatSingleScalar formats a single scalar value
+func (f *Formatter) formatSingleScalar(content []byte) []byte {
+	// For single scalars, just ensure consistent whitespace
+	trimmed := strings.TrimSpace(string(content))
+	if trimmed == "" {
+		return content
+	}
+
+	// Add newline if not present
+	if !strings.HasSuffix(trimmed, "\n") {
+		trimmed += "\n"
+	}
+
+	return []byte(trimmed)
+}
+
 // FormatContent formats YAML content according to the schema
 func (f *Formatter) FormatContent(content []byte) ([]byte, error) {
+	// Handle edge cases first
+	if result, handled := f.handleEdgeCases(content); handled {
+		return result, nil
+	}
+
 	// Validate input
 	if err := f.parser.ValidateYAML(content); err != nil {
 		return nil, fmt.Errorf("invalid input YAML: %w", err)
 	}
-	
+
 	// Handle multi-document YAML
 	if f.parser.IsMultiDocument(content) {
 		return f.formatMultiDocument(content)
 	}
-	
+
 	// Handle single document
 	return f.formatSingleDocument(content)
 }
@@ -51,25 +162,25 @@ func (f *Formatter) formatSingleDocument(content []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
+
 	// Reorder according to schema
 	if err := f.reorderer.ReorderNode(node, ""); err != nil {
 		return nil, fmt.Errorf("failed to reorder YAML: %w", err)
 	}
-	
+
 	// Format and return
 	formatted, err := f.writer.FormatToString(node)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format YAML: %w", err)
 	}
-	
+
 	formattedBytes := []byte(formatted)
-	
+
 	// Validate output
 	if err := f.writer.ValidateFormattedOutput(formattedBytes); err != nil {
 		return nil, fmt.Errorf("formatted output validation failed: %w", err)
 	}
-	
+
 	return formattedBytes, nil
 }
 
@@ -80,32 +191,32 @@ func (f *Formatter) formatMultiDocument(content []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse multi-document YAML: %w", err)
 	}
-	
+
 	// Reorder each document
 	for i, node := range nodes {
 		if err := f.reorderer.ReorderNode(node, ""); err != nil {
 			return nil, fmt.Errorf("failed to reorder document %d: %w", i, err)
 		}
 	}
-	
+
 	// Format all documents
 	formatted, err := f.writer.FormatNodesToString(nodes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format multi-document YAML: %w", err)
 	}
-	
+
 	formattedBytes := []byte(formatted)
-	
+
 	// Validate each document in the output
 	outputNodes, err := f.parser.ParseMultiDocument(formattedBytes)
 	if err != nil {
 		return nil, fmt.Errorf("formatted multi-document output validation failed: %w", err)
 	}
-	
+
 	if len(outputNodes) != len(nodes) {
 		return nil, fmt.Errorf("document count mismatch after formatting: expected %d, got %d", len(nodes), len(outputNodes))
 	}
-	
+
 	return formattedBytes, nil
 }
 
@@ -115,12 +226,12 @@ func (f *Formatter) CheckFormat(content []byte) (bool, error) {
 	if err := f.parser.ValidateYAML(content); err != nil {
 		return false, fmt.Errorf("invalid input YAML: %w", err)
 	}
-	
+
 	// Handle multi-document YAML
 	if f.parser.IsMultiDocument(content) {
 		return f.checkMultiDocumentFormat(content)
 	}
-	
+
 	// Handle single document
 	return f.checkSingleDocumentFormat(content)
 }
@@ -131,7 +242,7 @@ func (f *Formatter) checkSingleDocumentFormat(content []byte) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
+
 	return f.reorderer.CheckOrder(node, "")
 }
 
@@ -141,7 +252,7 @@ func (f *Formatter) checkMultiDocumentFormat(content []byte) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to parse multi-document YAML: %w", err)
 	}
-	
+
 	for i, node := range nodes {
 		if ordered, err := f.reorderer.CheckOrder(node, ""); err != nil {
 			return false, fmt.Errorf("failed to check order for document %d: %w", i, err)
@@ -149,7 +260,7 @@ func (f *Formatter) checkMultiDocumentFormat(content []byte) (bool, error) {
 			return false, nil
 		}
 	}
-	
+
 	return true, nil
 }
 
@@ -159,7 +270,7 @@ func (f *Formatter) GetStats(original []byte) (*FormatStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to format content for stats: %w", err)
 	}
-	
+
 	return f.writer.CalculateStats(original, formatted), nil
 }
 
@@ -195,7 +306,7 @@ func (f *Formatter) ValidateSchema() error {
 	if f.schema == nil {
 		return fmt.Errorf("no schema set")
 	}
-	
+
 	return f.schema.Validate()
 }
 

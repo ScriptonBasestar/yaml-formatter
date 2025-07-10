@@ -22,18 +22,18 @@ func NewParser(preserveComments bool) *Parser {
 // ParseYAML parses YAML content and returns the root node
 func (p *Parser) ParseYAML(content []byte) (*yaml.Node, error) {
 	var node yaml.Node
-	
+
 	if err := yaml.Unmarshal(content, &node); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
+
 	return &node, nil
 }
 
 // ParseMultiDocument parses YAML content that may contain multiple documents
 func (p *Parser) ParseMultiDocument(content []byte) ([]*yaml.Node, error) {
 	decoder := yaml.NewDecoder(strings.NewReader(string(content)))
-	
+
 	var documents []*yaml.Node
 	for {
 		var node yaml.Node
@@ -45,7 +45,7 @@ func (p *Parser) ParseMultiDocument(content []byte) ([]*yaml.Node, error) {
 		}
 		documents = append(documents, &node)
 	}
-	
+
 	return documents, nil
 }
 
@@ -59,26 +59,26 @@ func (p *Parser) GetNodeAtPath(root *yaml.Node, path string) *yaml.Node {
 	if path == "" {
 		return root
 	}
-	
+
 	parts := strings.Split(path, ".")
 	current := root
-	
+
 	// Skip document node if present
 	if current.Kind == yaml.DocumentNode && len(current.Content) > 0 {
 		current = current.Content[0]
 	}
-	
+
 	for _, part := range parts {
 		if part == "" {
 			continue
 		}
-		
+
 		current = p.findChildNode(current, part)
 		if current == nil {
 			return nil
 		}
 	}
-	
+
 	return current
 }
 
@@ -87,16 +87,16 @@ func (p *Parser) findChildNode(parent *yaml.Node, key string) *yaml.Node {
 	if parent.Kind != yaml.MappingNode {
 		return nil
 	}
-	
+
 	for i := 0; i < len(parent.Content); i += 2 {
 		keyNode := parent.Content[i]
 		valueNode := parent.Content[i+1]
-		
+
 		if keyNode.Value == key {
 			return valueNode
 		}
 	}
-	
+
 	return nil
 }
 
@@ -105,13 +105,13 @@ func (p *Parser) GetKeys(node *yaml.Node) []string {
 	if node.Kind != yaml.MappingNode {
 		return nil
 	}
-	
+
 	var keys []string
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		keys = append(keys, keyNode.Value)
 	}
-	
+
 	return keys
 }
 
@@ -120,7 +120,7 @@ func (p *Parser) CloneNode(node *yaml.Node) *yaml.Node {
 	if node == nil {
 		return nil
 	}
-	
+
 	clone := &yaml.Node{
 		Kind:        node.Kind,
 		Style:       node.Style,
@@ -135,11 +135,11 @@ func (p *Parser) CloneNode(node *yaml.Node) *yaml.Node {
 		Line:        node.Line,
 		Column:      node.Column,
 	}
-	
+
 	for i, child := range node.Content {
 		clone.Content[i] = p.CloneNode(child)
 	}
-	
+
 	return clone
 }
 
