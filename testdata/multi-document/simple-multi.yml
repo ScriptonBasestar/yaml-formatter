@@ -1,0 +1,12 @@
+---
+name: Document 1
+type: config
+value: 100
+---
+name: Document 2
+type: config
+value: 200
+---
+name: Document 3
+type: config
+value: 300

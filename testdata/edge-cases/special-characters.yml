@@ -1,0 +1,26 @@
+special_chars:
+  unicode: "Hello 世界 🌍"
+  emoji: "🚀 🎉 ✨"
+  escapes: "Line1\nLine2\tTabbed"
+  quotes: "He said \"Hello\""
+  single: "It's working"
+  
+keys_with_special_chars:
+  "key with spaces": value1
+  "key:with:colons": value2
+  "key-with-dashes": value3
+  "key.with.dots": value4
+  
+special_values:
+  null_value: null
+  empty_string: ""
+  boolean_yes: yes
+  boolean_no: no
+  boolean_true: true
+  boolean_false: false
+  number_int: 42
+  number_float: 3.14159
+  number_hex: 0xFF
+  number_octal: 0o755
+  infinity: .inf
+  not_a_number: .nan

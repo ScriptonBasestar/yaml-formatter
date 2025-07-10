@@ -96,9 +96,12 @@ func (fh *FileHandler) BackupFile(path string) (string, error) {
 }
 
 // FileExists checks if a file exists
-func (fh *FileHandler) FileExists(path string) bool {
+func (fh *FileHandler) FileExists(path string) (bool, error) {
 	exists, err := afero.Exists(fh.fs, path)
-	return err == nil && exists
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // IsDirectory checks if a path is a directory
@@ -185,4 +188,42 @@ func GetRelativePath(base, target string) (string, error) {
 // EnsureDir ensures that a directory exists, creating it if necessary
 func EnsureDir(fs afero.Fs, dir string) error {
 	return fs.MkdirAll(dir, 0755)
+}
+
+// IsYAMLFile checks if a file is a YAML file (exported method)
+func (fh *FileHandler) IsYAMLFile(path string) bool {
+	return isYAMLFile(path)
+}
+
+// GetAbsolutePath returns the absolute path for a given path
+func (fh *FileHandler) GetAbsolutePath(path string) (string, error) {
+	return filepath.Abs(path)
+}
+
+// ListYAMLFiles lists all YAML files in a directory
+func (fh *FileHandler) ListYAMLFiles(dir string, recursive bool) ([]string, error) {
+	var yamlFiles []string
+	
+	if recursive {
+		pattern := filepath.Join(dir, "**", "*.{yml,yaml}")
+		matches, err := fh.ExpandGlob([]string{pattern})
+		if err != nil {
+			return nil, err
+		}
+		return matches, nil
+	}
+	
+	// Non-recursive
+	entries, err := afero.ReadDir(fh.fs, dir)
+	if err != nil {
+		return nil, err
+	}
+	
+	for _, entry := range entries {
+		if !entry.IsDir() && isYAMLFile(entry.Name()) {
+			yamlFiles = append(yamlFiles, filepath.Join(dir, entry.Name()))
+		}
+	}
+	
+	return yamlFiles, nil
 }

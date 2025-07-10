@@ -1,0 +1,10 @@
+name: duplicate keys test
+config:
+  key: value1
+  key: value2  # Duplicate key
+  other: value3
+  
+items:
+  item1: a
+  item2: b
+  item1: c  # Duplicate key

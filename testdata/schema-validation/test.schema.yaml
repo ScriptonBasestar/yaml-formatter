@@ -1,0 +1,15 @@
+name:
+version:
+type:
+metadata:
+  author:
+  created:
+  updated:
+settings:
+  debug:
+  timeout:
+  retries:
+features:
+  - name:
+    enabled:
+    config:

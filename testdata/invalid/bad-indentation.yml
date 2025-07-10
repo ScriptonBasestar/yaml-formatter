@@ -1,0 +1,8 @@
+name: bad indentation
+items:
+  - item1
+   - item2  # Wrong indentation
+  - item3
+config:
+ key1: value1  # Wrong indentation
+  key2: value2

@@ -1,0 +1,49 @@
+application:
+  name: Complex App
+  version: 2.5.0
+  environment: production
+  
+  services:
+    database:
+      type: postgresql
+      version: 14
+      config:
+        max_connections: 100
+        shared_buffers: 256MB
+        effective_cache_size: 1GB
+      
+    cache:
+      type: redis
+      version: 7.0
+      config:
+        maxmemory: 512mb
+        maxmemory-policy: allkeys-lru
+        
+    api:
+      replicas: 3
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      
+  monitoring:
+    enabled: true
+    providers:
+      - name: prometheus
+        port: 9090
+      - name: grafana
+        port: 3000
+        
+  security:
+    tls:
+      enabled: true
+      certManager:
+        issuer: letsencrypt
+    authentication:
+      type: oauth2
+      providers:
+        - google
+        - github

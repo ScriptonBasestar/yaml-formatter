@@ -219,11 +219,30 @@ func (r *Reorderer) checkMappingOrder(node *yaml.Node, path string) (bool, error
 		currentKeys = append(currentKeys, node.Content[i].Value)
 	}
 	
-	// Check if current order matches expected order
-	expectedOrder := r.buildExpectedOrder(currentKeys, keyOrder)
+	// Check if schema-defined keys are in the right relative order
+	// We ignore extra keys not in the schema
+	schemaKeysInOrder := make([]string, 0)
+	for _, key := range currentKeys {
+		if contains(keyOrder, key) {
+			schemaKeysInOrder = append(schemaKeysInOrder, key)
+		}
+	}
 	
-	for i, key := range currentKeys {
-		if i >= len(expectedOrder) || key != expectedOrder[i] {
+	// Build expected order for only the schema keys present
+	expectedSchemaOrder := make([]string, 0)
+	for _, key := range keyOrder {
+		if contains(currentKeys, key) {
+			expectedSchemaOrder = append(expectedSchemaOrder, key)
+		}
+	}
+	
+	// Check if schema keys are in the right order
+	if len(schemaKeysInOrder) != len(expectedSchemaOrder) {
+		return false, nil
+	}
+	
+	for i, key := range schemaKeysInOrder {
+		if key != expectedSchemaOrder[i] {
 			return false, nil
 		}
 	}

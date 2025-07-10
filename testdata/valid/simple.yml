@@ -1,0 +1,10 @@
+name: simple test
+version: 1.0
+description: A simple valid YAML file
+items:
+  - first
+  - second
+  - third
+metadata:
+  author: test
+  date: 2024-01-01

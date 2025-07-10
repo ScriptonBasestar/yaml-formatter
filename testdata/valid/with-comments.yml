@@ -1,0 +1,31 @@
+# Application configuration file
+# Last updated: 2024-01-01
+
+name: CommentedApp # Application name
+version: 1.2.3 # Semantic version
+
+# Database configuration
+database:
+  host: localhost # Database host
+  port: 5432 # PostgreSQL default port
+  # Connection pool settings
+  pool:
+    min: 5
+    max: 20
+    
+# Feature flags
+features:
+  - name: new-ui # Enable new UI
+    enabled: true
+  - name: beta-api
+    enabled: false # Still in testing
+    
+# Logging configuration
+logging:
+  level: info # Available: debug, info, warn, error
+  # Output formats
+  format: json
+  # Destinations
+  outputs:
+    - stdout
+    - file: /var/log/app.log

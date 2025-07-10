@@ -1,0 +1,16 @@
+description: >
+  This is a very long line that should be folded properly when formatted. It contains more than 80 characters and tests the line wrapping functionality of the YAML formatter. The formatter should handle this gracefully.
+
+long_string: "This is another very long string that is quoted and should remain on a single line even though it exceeds the normal line width limit because it's a quoted string"
+
+multiline_literal: |
+  This is a literal block scalar
+  It preserves newlines exactly as written
+  Even very long lines are preserved exactly: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+  
+multiline_folded: >
+  This is a folded block scalar.
+  Multiple lines are folded into a single line.
+  But paragraph breaks are preserved.
+  
+  Like this one.

@@ -1,0 +1,25 @@
+---
+# First document - simple scalar
+Just a string
+---
+# Second document - array
+- item1
+- item2
+- item3
+---
+# Third document - mapping
+key1: value1
+key2: value2
+key3:
+  nested1: value3
+  nested2: value4
+---
+# Fourth document - complex
+application:
+  name: MyApp
+  version: 1.0.0
+  services:
+    - name: api
+      port: 8080
+    - name: db
+      port: 5432

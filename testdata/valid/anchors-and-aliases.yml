@@ -1,0 +1,38 @@
+# YAML with anchors and aliases
+defaults: &defaults
+  adapter: postgresql
+  encoding: utf8
+  pool: 5
+  timeout: 5000
+
+development:
+  <<: *defaults
+  database: myapp_development
+  host: localhost
+
+test:
+  <<: *defaults
+  database: myapp_test
+  host: localhost
+
+production:
+  <<: *defaults
+  database: myapp_production
+  host: prod.example.com
+  pool: 25
+  
+# Reusable node definitions
+common_labels: &common_labels
+  app: myapp
+  environment: production
+  team: backend
+
+services:
+  - name: api
+    labels:
+      <<: *common_labels
+      component: api
+  - name: worker
+    labels:
+      <<: *common_labels
+      component: worker

@@ -1,0 +1,10 @@
+defaults: &defaults
+  key: value
+
+development:
+  <<: *unknown_anchor  # Reference to non-existent anchor
+  database: dev
+
+production:
+  <<: *defaults
+  <<: *another_unknown  # Another bad reference

@@ -1,0 +1,5 @@
+name: "unclosed quote
+version: 1.0
+description: 'This also has unclosed quote
+items:
+  - "item with unclosed quote

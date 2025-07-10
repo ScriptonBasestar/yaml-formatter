@@ -1,0 +1,20 @@
+name: Test Application
+version: 1.0.0
+type: service
+metadata:
+  author: John Doe
+  created: 2024-01-01
+  updated: 2024-01-15
+settings:
+  debug: false
+  timeout: 30
+  retries: 3
+features:
+  - name: feature1
+    enabled: true
+    config:
+      key1: value1
+  - name: feature2
+    enabled: false
+    config:
+      key2: value2

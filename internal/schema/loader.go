@@ -54,17 +54,12 @@ func (l *Loader) LoadSchema(name string) (*Schema, error) {
 		return nil, fmt.Errorf("failed to read schema file %s: %w", schemaPath, err)
 	}
 	
-	var schema Schema
-	if err := yaml.Unmarshal(data, &schema); err != nil {
+	schema, err := LoadFromBytes(data, name)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse schema file %s: %w", schemaPath, err)
 	}
 	
-	// Set name if not present in file
-	if schema.Name == "" {
-		schema.Name = name
-	}
-	
-	return &schema, nil
+	return schema, nil
 }
 
 // SaveSchema saves a schema to the schema directory
@@ -81,7 +76,20 @@ func (l *Loader) SaveSchema(schema *Schema) error {
 		return fmt.Errorf("schema validation failed: %w", err)
 	}
 	
-	data, err := yaml.Marshal(schema)
+	// Create a copy without the Order field for serialization
+	schemaData := map[string]interface{}{}
+	
+	// Add Keys
+	for k, v := range schema.Keys {
+		schemaData[k] = v
+	}
+	
+	// Add NonSort if present
+	if schema.NonSort != nil && len(schema.NonSort) > 0 {
+		schemaData["non_sort"] = schema.NonSort
+	}
+	
+	data, err := yaml.Marshal(schemaData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
@@ -101,18 +109,16 @@ func (l *Loader) LoadSchemaFromFile(filePath string) (*Schema, error) {
 		return nil, fmt.Errorf("failed to read schema file %s: %w", filePath, err)
 	}
 	
-	var schema Schema
-	if err := yaml.Unmarshal(data, &schema); err != nil {
+	// Generate name from file path
+	base := filepath.Base(filePath)
+	name := strings.TrimSuffix(base, filepath.Ext(base))
+	
+	schema, err := LoadFromBytes(data, name)
+	if err != nil {
 		return nil, fmt.Errorf("failed to parse schema file %s: %w", filePath, err)
 	}
 	
-	// Generate name from file path if not present
-	if schema.Name == "" {
-		base := filepath.Base(filePath)
-		schema.Name = strings.TrimSuffix(base, filepath.Ext(base))
-	}
-	
-	return &schema, nil
+	return schema, nil
 }
 
 // GenerateAndSaveFromYAML creates a schema from a YAML file and saves it
