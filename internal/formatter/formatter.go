@@ -1,10 +1,10 @@
 package formatter
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"yaml-formatter/internal/schema"
 )
@@ -69,40 +69,44 @@ func (f *Formatter) isWhitespaceOnly(content []byte) bool {
 
 // isCommentsOnly checks if content contains only YAML comments
 func (f *Formatter) isCommentsOnly(content []byte) bool {
-	lines := strings.Split(string(content), "\n")
+	if len(content) == 0 {
+		return false
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(content))
 	hasNonEmptyLine := false
 
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
+	for scanner.Scan() {
+		line := bytes.TrimSpace(scanner.Bytes())
+		if len(line) == 0 {
 			continue
 		}
 		hasNonEmptyLine = true
 
 		// If line doesn't start with #, it's not a comment-only file
-		if !strings.HasPrefix(trimmed, "#") {
+		if line[0] != '#' {
 			return false
 		}
 	}
 
-	return hasNonEmptyLine
+	return hasNonEmptyLine && scanner.Err() == nil
 }
 
 // isSingleScalar checks if content contains only a single scalar value
 func (f *Formatter) isSingleScalar(content []byte) bool {
-	trimmed := strings.TrimSpace(string(content))
-	if trimmed == "" {
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 {
 		return false
 	}
 
 	// Simple heuristic: if it doesn't contain YAML structure characters
 	// and doesn't start with comment, it might be a single scalar
-	if !strings.Contains(trimmed, ":") &&
-		!strings.Contains(trimmed, "-") &&
-		!strings.Contains(trimmed, "[") &&
-		!strings.Contains(trimmed, "{") &&
-		!strings.HasPrefix(trimmed, "#") &&
-		!strings.Contains(trimmed, "\n---") {
+	if !bytes.Contains(trimmed, []byte(":")) &&
+		!bytes.Contains(trimmed, []byte("-")) &&
+		!bytes.Contains(trimmed, []byte("[")) &&
+		!bytes.Contains(trimmed, []byte("{")) &&
+		!bytes.HasPrefix(trimmed, []byte("#")) &&
+		!bytes.Contains(trimmed, []byte("\n---")) {
 
 		// Additional check: try to parse as single value
 		return f.validateSingleScalar(content)
@@ -121,17 +125,17 @@ func (f *Formatter) validateSingleScalar(content []byte) bool {
 // formatSingleScalar formats a single scalar value
 func (f *Formatter) formatSingleScalar(content []byte) []byte {
 	// For single scalars, just ensure consistent whitespace
-	trimmed := strings.TrimSpace(string(content))
-	if trimmed == "" {
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 {
 		return content
 	}
 
 	// Add newline if not present
-	if !strings.HasSuffix(trimmed, "\n") {
-		trimmed += "\n"
+	if !bytes.HasSuffix(trimmed, []byte("\n")) {
+		return append(trimmed, '\n')
 	}
 
-	return []byte(trimmed)
+	return trimmed
 }
 
 // FormatContent formats YAML content according to the schema

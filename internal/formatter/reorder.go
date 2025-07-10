@@ -12,6 +12,7 @@ import (
 type Reorderer struct {
 	schema *schema.Schema
 	parser *Parser
+	maxDepth int
 }
 
 // NewReorderer creates a new YAML reorderer
@@ -19,25 +20,44 @@ func NewReorderer(s *schema.Schema, p *Parser) *Reorderer {
 	return &Reorderer{
 		schema: s,
 		parser: p,
+		maxDepth: 100, // Default max depth
 	}
+}
+
+// SetMaxDepth sets the maximum nesting depth for the reorderer
+func (r *Reorderer) SetMaxDepth(depth int) {
+	r.maxDepth = depth
 }
 
 // ReorderNode reorders a YAML node according to the schema
 func (r *Reorderer) ReorderNode(node *yaml.Node, path string) error {
+	return r.reorderNodeRecursive(node, path, 0, make(map[*yaml.Node]bool))
+}
+
+func (r *Reorderer) reorderNodeRecursive(node *yaml.Node, path string, depth int, visited map[*yaml.Node]bool) error {
+	if visited[node] {
+		return fmt.Errorf("circular reference detected at path: %s", path)
+	}
+	visited[node] = true
+
+	if depth > r.maxDepth {
+		return fmt.Errorf("max nesting depth of %d exceeded", r.maxDepth)
+	}
+
 	if node == nil {
 		return fmt.Errorf("node cannot be nil")
 	}
 
 	// Skip document nodes
 	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-		return r.ReorderNode(node.Content[0], path)
+		return r.reorderNodeRecursive(node.Content[0], path, depth, visited)
 	}
 
 	switch node.Kind {
 	case yaml.MappingNode:
-		return r.reorderMappingNode(node, path)
+		return r.reorderMappingNode(node, path, depth, visited)
 	case yaml.SequenceNode:
-		return r.reorderSequenceNode(node, path)
+		return r.reorderSequenceNode(node, path, depth, visited)
 	default:
 		// Scalar nodes don't need reordering
 		return nil
@@ -45,7 +65,7 @@ func (r *Reorderer) ReorderNode(node *yaml.Node, path string) error {
 }
 
 // reorderMappingNode reorders the keys in a mapping node
-func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
+func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string, depth int, visited map[*yaml.Node]bool) error {
 	if len(node.Content)%2 != 0 {
 		return fmt.Errorf("mapping node has odd number of children")
 	}
@@ -54,7 +74,7 @@ func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
 	keyOrder := r.schema.GetKeyOrder(path)
 	if len(keyOrder) == 0 {
 		// No specific order defined, keep existing order but still process children
-		return r.processChildren(node, path)
+		return r.processChildren(node, path, depth, visited)
 	}
 
 	// Create a map of key-value pairs for easier manipulation
@@ -99,16 +119,16 @@ func (r *Reorderer) reorderMappingNode(node *yaml.Node, path string) error {
 	node.Content = newContent
 
 	// Recursively process child nodes
-	return r.processChildren(node, path)
+	return r.processChildren(node, path, depth, visited)
 }
 
 // reorderSequenceNode processes sequence nodes (arrays)
-func (r *Reorderer) reorderSequenceNode(node *yaml.Node, path string) error {
+func (r *Reorderer) reorderSequenceNode(node *yaml.Node, path string, depth int, visited map[*yaml.Node]bool) error {
 	// For sequences, we don't reorder the items themselves,
 	// but we might need to reorder keys within each item if they are mappings
 	for i, child := range node.Content {
 		childPath := fmt.Sprintf("%s[%d]", path, i)
-		if err := r.ReorderNode(child, childPath); err != nil {
+		if err := r.reorderNodeRecursive(child, childPath, depth+1, visited); err != nil {
 			return fmt.Errorf("failed to reorder sequence item %d: %w", i, err)
 		}
 	}
@@ -117,7 +137,7 @@ func (r *Reorderer) reorderSequenceNode(node *yaml.Node, path string) error {
 }
 
 // processChildren recursively processes child nodes
-func (r *Reorderer) processChildren(node *yaml.Node, path string) error {
+func (r *Reorderer) processChildren(node *yaml.Node, path string, depth int, visited map[*yaml.Node]bool) error {
 	if node.Kind != yaml.MappingNode {
 		return nil
 	}
@@ -139,7 +159,7 @@ func (r *Reorderer) processChildren(node *yaml.Node, path string) error {
 		childPath += keyNode.Value
 
 		// Recursively process the value node
-		if err := r.ReorderNode(valueNode, childPath); err != nil {
+		if err := r.reorderNodeRecursive(valueNode, childPath, depth+1, visited); err != nil {
 			return fmt.Errorf("failed to reorder child %s: %w", keyNode.Value, err)
 		}
 	}

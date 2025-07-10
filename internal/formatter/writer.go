@@ -542,37 +542,32 @@ func (w *Writer) applyFormattingQualityImprovements(content string) string {
 // handleSmartBlankLines implements smart blank line handling
 func (w *Writer) handleSmartBlankLines(lines []string) []string {
 	var result []string
-	inBlock := false
-	blockDepth := 0
+	prevIndent := -1
+	lastLineWasNonBlank := false
 
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		currentDepth := w.getIndentationLevel(line)
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		currentIndent := w.getIndentationLevel(line)
 
-		// Detect block boundaries
-		if w.isBlockStart(line) {
-			// Add blank line before new blocks (except at start)
-			if i > 0 && !w.isPreviousLineBlank(result) && !inBlock {
+		// If the current line is blank
+		if trimmedLine == "" {
+			// Add blank line only if the previous line was not blank
+			if lastLineWasNonBlank {
 				result = append(result, "")
 			}
-			inBlock = true
-			blockDepth = currentDepth
-		} else if inBlock && currentDepth <= blockDepth && trimmed != "" {
-			// Exiting block
-			inBlock = false
-			blockDepth = 0
-		}
-
-		// Add blank line after blocks
-		if !inBlock && w.isBlockEnd(line, lines, i) {
-			result = append(result, line)
-			if i < len(lines)-1 && !w.isNextLineBlank(lines, i) {
-				result = append(result, "")
-			}
+			lastLineWasNonBlank = false
 			continue
 		}
 
+		// If current line is not blank
+		// Add a blank line if indentation decreases (exiting a block) and it's not a top-level element
+		if prevIndent != -1 && currentIndent < prevIndent && lastLineWasNonBlank && currentIndent > 0 {
+			result = append(result, "")
+		}
+
 		result = append(result, line)
+		prevIndent = currentIndent
+		lastLineWasNonBlank = true
 	}
 
 	return result
@@ -652,8 +647,6 @@ func (w *Writer) minimizeConsecutiveBlankLines(lines []string) []string {
 	return result
 }
 
-// Helper methods for formatting quality improvements
-
 // getIndentationLevel returns the indentation level of a line
 func (w *Writer) getIndentationLevel(line string) int {
 	count := 0
@@ -667,46 +660,6 @@ func (w *Writer) getIndentationLevel(line string) int {
 		}
 	}
 	return count
-}
-
-// isBlockStart checks if a line starts a new block
-func (w *Writer) isBlockStart(line string) bool {
-	trimmed := strings.TrimSpace(line)
-	
-	// YAML block indicators
-	return strings.HasSuffix(trimmed, ":") || 
-		   strings.Contains(trimmed, "- ") ||
-		   (strings.Contains(trimmed, ":") && 
-		    !strings.Contains(trimmed, "\"") && 
-		    !strings.Contains(trimmed, "'"))
-}
-
-// isBlockEnd checks if a line ends a block
-func (w *Writer) isBlockEnd(line string, lines []string, index int) bool {
-	if index >= len(lines)-1 {
-		return true
-	}
-	
-	currentDepth := w.getIndentationLevel(line)
-	nextDepth := w.getIndentationLevel(lines[index+1])
-	
-	return nextDepth < currentDepth
-}
-
-// isPreviousLineBlank checks if the previous line in result is blank
-func (w *Writer) isPreviousLineBlank(result []string) bool {
-	if len(result) == 0 {
-		return false
-	}
-	return strings.TrimSpace(result[len(result)-1]) == ""
-}
-
-// isNextLineBlank checks if the next line is blank
-func (w *Writer) isNextLineBlank(lines []string, index int) bool {
-	if index >= len(lines)-1 {
-		return false
-	}
-	return strings.TrimSpace(lines[index+1]) == ""
 }
 
 // normalizeIndentation normalizes indentation to use consistent spacing
