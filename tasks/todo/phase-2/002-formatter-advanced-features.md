@@ -43,11 +43,11 @@ func (f *Formatter) FormatContent(content []byte) ([]byte, error) {
 
 **Files to Modify**: `internal/formatter/writer.go`
 
-### Task 4.3: Formatting Quality Improvements (3 hours)
-- [ ] Implement smart blank line handling
-- [ ] Ensure indentation consistency
-- [ ] Add line length management
-- [ ] Improve comment positioning
+### Task 4.3: Formatting Quality Improvements (3 hours) ✅
+- [x] Implement smart blank line handling
+- [x] Ensure indentation consistency
+- [x] Add line length management
+- [x] Improve comment positioning
 
 **Files to Modify**: `internal/formatter/writer.go`
 

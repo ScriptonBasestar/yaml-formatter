@@ -19,6 +19,10 @@ type Writer struct {
 	preserveUnicode      bool
 	escapeSpecialChars   bool
 	normalizeLineEndings bool
+	smartBlankLines      bool
+	enforceLineWidth     bool
+	alignComments        bool
+	minimizeBlankLines   bool
 }
 
 // NewWriter creates a new YAML writer
@@ -30,6 +34,10 @@ func NewWriter() *Writer {
 		preserveUnicode:      true,
 		escapeSpecialChars:   false,
 		normalizeLineEndings: true,
+		smartBlankLines:      true,
+		enforceLineWidth:     false,
+		alignComments:        true,
+		minimizeBlankLines:   false,
 	}
 }
 
@@ -66,6 +74,30 @@ func (w *Writer) SetEscapeSpecialChars(escape bool) *Writer {
 // SetNormalizeLineEndings sets whether to normalize line endings
 func (w *Writer) SetNormalizeLineEndings(normalize bool) *Writer {
 	w.normalizeLineEndings = normalize
+	return w
+}
+
+// SetSmartBlankLines sets whether to use smart blank line handling
+func (w *Writer) SetSmartBlankLines(smart bool) *Writer {
+	w.smartBlankLines = smart
+	return w
+}
+
+// SetEnforceLineWidth sets whether to enforce line width limits
+func (w *Writer) SetEnforceLineWidth(enforce bool) *Writer {
+	w.enforceLineWidth = enforce
+	return w
+}
+
+// SetAlignComments sets whether to align comments
+func (w *Writer) SetAlignComments(align bool) *Writer {
+	w.alignComments = align
+	return w
+}
+
+// SetMinimizeBlankLines sets whether to minimize blank lines
+func (w *Writer) SetMinimizeBlankLines(minimize bool) *Writer {
+	w.minimizeBlankLines = minimize
 	return w
 }
 
@@ -415,6 +447,9 @@ func (w *Writer) postprocessOutput(content []byte) []byte {
 		output = w.doNormalizeLineEndings(output)
 	}
 
+	// Apply formatting quality improvements
+	output = w.applyFormattingQualityImprovements(output)
+
 	// Enhance Unicode handling
 	output = w.enhanceUnicodeOutput(output)
 
@@ -472,4 +507,370 @@ func (w *Writer) GetEscapeSpecialChars() bool {
 // GetNormalizeLineEndings returns whether line ending normalization is enabled
 func (w *Writer) GetNormalizeLineEndings() bool {
 	return w.normalizeLineEndings
+}
+
+// applyFormattingQualityImprovements applies various formatting quality improvements
+func (w *Writer) applyFormattingQualityImprovements(content string) string {
+	lines := strings.Split(content, "\n")
+
+	// Apply smart blank line handling
+	if w.smartBlankLines {
+		lines = w.handleSmartBlankLines(lines)
+	}
+
+	// Ensure indentation consistency
+	lines = w.ensureIndentationConsistency(lines)
+
+	// Apply line length management
+	if w.enforceLineWidth {
+		lines = w.applyLineWidthManagement(lines)
+	}
+
+	// Improve comment positioning
+	if w.alignComments && w.preserveComments {
+		lines = w.improveCommentPositioning(lines)
+	}
+
+	// Minimize blank lines if requested
+	if w.minimizeBlankLines {
+		lines = w.minimizeConsecutiveBlankLines(lines)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// handleSmartBlankLines implements smart blank line handling
+func (w *Writer) handleSmartBlankLines(lines []string) []string {
+	var result []string
+	inBlock := false
+	blockDepth := 0
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		currentDepth := w.getIndentationLevel(line)
+
+		// Detect block boundaries
+		if w.isBlockStart(line) {
+			// Add blank line before new blocks (except at start)
+			if i > 0 && !w.isPreviousLineBlank(result) && !inBlock {
+				result = append(result, "")
+			}
+			inBlock = true
+			blockDepth = currentDepth
+		} else if inBlock && currentDepth <= blockDepth && trimmed != "" {
+			// Exiting block
+			inBlock = false
+			blockDepth = 0
+		}
+
+		// Add blank line after blocks
+		if !inBlock && w.isBlockEnd(line, lines, i) {
+			result = append(result, line)
+			if i < len(lines)-1 && !w.isNextLineBlank(lines, i) {
+				result = append(result, "")
+			}
+			continue
+		}
+
+		result = append(result, line)
+	}
+
+	return result
+}
+
+// ensureIndentationConsistency ensures consistent indentation throughout
+func (w *Writer) ensureIndentationConsistency(lines []string) []string {
+	var result []string
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			result = append(result, "")
+			continue
+		}
+
+		// Normalize indentation to use consistent spacing
+		normalized := w.normalizeIndentation(line)
+		result = append(result, normalized)
+	}
+
+	return result
+}
+
+// applyLineWidthManagement manages line length according to settings
+func (w *Writer) applyLineWidthManagement(lines []string) []string {
+	var result []string
+
+	for _, line := range lines {
+		if len(line) <= w.lineWidth {
+			result = append(result, line)
+			continue
+		}
+
+		// Try to wrap long lines
+		wrapped := w.wrapLongLine(line)
+		result = append(result, wrapped...)
+	}
+
+	return result
+}
+
+// improveCommentPositioning aligns and positions comments better
+func (w *Writer) improveCommentPositioning(lines []string) []string {
+	var result []string
+	commentColumn := w.calculateOptimalCommentColumn(lines)
+
+	for _, line := range lines {
+		if w.hasInlineComment(line) {
+			aligned := w.alignInlineComment(line, commentColumn)
+			result = append(result, aligned)
+		} else {
+			result = append(result, line)
+		}
+	}
+
+	return result
+}
+
+// minimizeConsecutiveBlankLines reduces multiple consecutive blank lines
+func (w *Writer) minimizeConsecutiveBlankLines(lines []string) []string {
+	var result []string
+	blankCount := 0
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			blankCount++
+			// Allow at most one consecutive blank line
+			if blankCount <= 1 {
+				result = append(result, line)
+			}
+		} else {
+			blankCount = 0
+			result = append(result, line)
+		}
+	}
+
+	return result
+}
+
+// Helper methods for formatting quality improvements
+
+// getIndentationLevel returns the indentation level of a line
+func (w *Writer) getIndentationLevel(line string) int {
+	count := 0
+	for _, char := range line {
+		if char == ' ' {
+			count++
+		} else if char == '\t' {
+			count += w.indent // Convert tabs to spaces
+		} else {
+			break
+		}
+	}
+	return count
+}
+
+// isBlockStart checks if a line starts a new block
+func (w *Writer) isBlockStart(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	
+	// YAML block indicators
+	return strings.HasSuffix(trimmed, ":") || 
+		   strings.Contains(trimmed, "- ") ||
+		   (strings.Contains(trimmed, ":") && 
+		    !strings.Contains(trimmed, "\"") && 
+		    !strings.Contains(trimmed, "'"))
+}
+
+// isBlockEnd checks if a line ends a block
+func (w *Writer) isBlockEnd(line string, lines []string, index int) bool {
+	if index >= len(lines)-1 {
+		return true
+	}
+	
+	currentDepth := w.getIndentationLevel(line)
+	nextDepth := w.getIndentationLevel(lines[index+1])
+	
+	return nextDepth < currentDepth
+}
+
+// isPreviousLineBlank checks if the previous line in result is blank
+func (w *Writer) isPreviousLineBlank(result []string) bool {
+	if len(result) == 0 {
+		return false
+	}
+	return strings.TrimSpace(result[len(result)-1]) == ""
+}
+
+// isNextLineBlank checks if the next line is blank
+func (w *Writer) isNextLineBlank(lines []string, index int) bool {
+	if index >= len(lines)-1 {
+		return false
+	}
+	return strings.TrimSpace(lines[index+1]) == ""
+}
+
+// normalizeIndentation normalizes indentation to use consistent spacing
+func (w *Writer) normalizeIndentation(line string) string {
+	if strings.TrimSpace(line) == "" {
+		return ""
+	}
+
+	// Count leading whitespace
+	leadingSpaces := 0
+	for _, char := range line {
+		if char == ' ' {
+			leadingSpaces++
+		} else if char == '\t' {
+			leadingSpaces += w.indent
+		} else {
+			break
+		}
+	}
+
+	// Calculate proper indentation level
+	indentLevel := leadingSpaces / w.indent
+	properIndent := strings.Repeat(" ", indentLevel*w.indent)
+	
+	// Replace leading whitespace with proper indentation
+	trimmed := strings.TrimLeft(line, " \t")
+	return properIndent + trimmed
+}
+
+// wrapLongLine wraps a long line to fit within line width
+func (w *Writer) wrapLongLine(line string) []string {
+	if len(line) <= w.lineWidth {
+		return []string{line}
+	}
+
+	// For YAML, we're conservative about line wrapping
+	// Only wrap at safe points like after commas in arrays/objects
+	
+	indent := w.getIndentationLevel(line)
+	indentStr := strings.Repeat(" ", indent)
+	
+	// Try to find safe wrap points
+	if strings.Contains(line, ", ") {
+		return w.wrapAtCommas(line, indentStr)
+	}
+	
+	// If no safe wrap points, return as-is to avoid breaking YAML
+	return []string{line}
+}
+
+// wrapAtCommas wraps a line at comma positions
+func (w *Writer) wrapAtCommas(line string, indentStr string) []string {
+	var result []string
+	parts := strings.Split(line, ", ")
+	
+	currentLine := parts[0]
+	for i := 1; i < len(parts); i++ {
+		testLine := currentLine + ", " + parts[i]
+		if len(testLine) <= w.lineWidth {
+			currentLine = testLine
+		} else {
+			result = append(result, currentLine+",")
+			currentLine = indentStr + strings.Repeat(" ", w.indent) + parts[i]
+		}
+	}
+	
+	if currentLine != "" {
+		result = append(result, currentLine)
+	}
+	
+	return result
+}
+
+// hasInlineComment checks if a line has an inline comment
+func (w *Writer) hasInlineComment(line string) bool {
+	// Look for # not inside quotes
+	inQuotes := false
+	var quoteChar rune
+	
+	for i, char := range line {
+		if !inQuotes && (char == '"' || char == '\'') {
+			inQuotes = true
+			quoteChar = char
+		} else if inQuotes && char == quoteChar && (i == 0 || rune(line[i-1]) != '\\') {
+			inQuotes = false
+		} else if !inQuotes && char == '#' {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// calculateOptimalCommentColumn calculates the best column for aligning comments
+func (w *Writer) calculateOptimalCommentColumn(lines []string) int {
+	maxContentLength := 0
+	
+	for _, line := range lines {
+		if w.hasInlineComment(line) {
+			commentPos := w.findCommentPosition(line)
+			if commentPos > maxContentLength {
+				maxContentLength = commentPos
+			}
+		}
+	}
+	
+	// Align to the next multiple of indent size after max content
+	return ((maxContentLength / w.indent) + 1) * w.indent
+}
+
+// findCommentPosition finds the position of the comment in a line
+func (w *Writer) findCommentPosition(line string) int {
+	inQuotes := false
+	var quoteChar rune
+	
+	for i, char := range line {
+		if !inQuotes && (char == '"' || char == '\'') {
+			inQuotes = true
+			quoteChar = char
+		} else if inQuotes && char == quoteChar && (i == 0 || rune(line[i-1]) != '\\') {
+			inQuotes = false
+		} else if !inQuotes && char == '#' {
+			return i
+		}
+	}
+	
+	return len(line)
+}
+
+// alignInlineComment aligns an inline comment to the specified column
+func (w *Writer) alignInlineComment(line string, column int) string {
+	commentPos := w.findCommentPosition(line)
+	if commentPos >= len(line) {
+		return line
+	}
+	
+	content := strings.TrimRight(line[:commentPos], " \t")
+	comment := line[commentPos:]
+	
+	// Calculate spaces needed
+	spacesNeeded := column - len(content)
+	if spacesNeeded < 1 {
+		spacesNeeded = 1
+	}
+	
+	return content + strings.Repeat(" ", spacesNeeded) + comment
+}
+
+// GetSmartBlankLines returns whether smart blank line handling is enabled
+func (w *Writer) GetSmartBlankLines() bool {
+	return w.smartBlankLines
+}
+
+// GetEnforceLineWidth returns whether line width enforcement is enabled
+func (w *Writer) GetEnforceLineWidth() bool {
+	return w.enforceLineWidth
+}
+
+// GetAlignComments returns whether comment alignment is enabled
+func (w *Writer) GetAlignComments() bool {
+	return w.alignComments
+}
+
+// GetMinimizeBlankLines returns whether blank line minimization is enabled
+func (w *Writer) GetMinimizeBlankLines() bool {
+	return w.minimizeBlankLines
 }

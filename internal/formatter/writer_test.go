@@ -533,3 +533,110 @@ func TestWriterAdvancedUnicodeHandling(t *testing.T) {
 		})
 	}
 }
+
+func TestWriterFormattingQualityImprovements(t *testing.T) {
+	writer := NewWriter()
+	parser := NewParser(true)
+	
+	tests := []struct {
+		name     string
+		input    string
+		setup    func(*Writer)
+		contains []string
+	}{
+		{
+			name: "Smart blank lines",
+			input: `name: test
+version: 1.0
+metadata:
+  author: test
+config:
+  debug: true`,
+			setup: func(w *Writer) {
+				w.SetSmartBlankLines(true)
+			},
+			contains: []string{"name:", "version:", "metadata:", "config:"},
+		},
+		{
+			name: "Comment alignment",
+			input: `name: test # Main name
+version: 1.0.0 # Version number
+debug: false # Debug flag`,
+			setup: func(w *Writer) {
+				w.SetAlignComments(true)
+			},
+			contains: []string{"# Main name", "# Version number", "# Debug flag"},
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(writer)
+			
+			node, err := parser.ParseYAML([]byte(tt.input))
+			if err != nil {
+				t.Fatalf("Failed to parse input: %v", err)
+			}
+			
+			result, err := writer.FormatToString(node)
+			if err != nil {
+				t.Errorf("FormatToString failed: %v", err)
+				return
+			}
+			
+			// Verify the result contains expected elements
+			for _, expected := range tt.contains {
+				if !strings.Contains(result, expected) {
+					t.Errorf("Result missing expected content: %s", expected)
+				}
+			}
+			
+			// Verify the result is valid YAML
+			if err := parser.ValidateYAML([]byte(result)); err != nil {
+				t.Errorf("Result is not valid YAML: %v", err)
+			}
+			
+			t.Logf("Input:\n%s", tt.input)
+			t.Logf("Output:\n%s", result)
+		})
+	}
+}
+
+func TestWriterFormattingQualityConfigurationMethods(t *testing.T) {
+	writer := NewWriter()
+	
+	// Test default values
+	if !writer.GetSmartBlankLines() {
+		t.Error("Default SmartBlankLines should be true")
+	}
+	if writer.GetEnforceLineWidth() {
+		t.Error("Default EnforceLineWidth should be false")
+	}
+	if !writer.GetAlignComments() {
+		t.Error("Default AlignComments should be true")
+	}
+	if writer.GetMinimizeBlankLines() {
+		t.Error("Default MinimizeBlankLines should be false")
+	}
+	
+	// Test setters
+	writer.SetSmartBlankLines(false)
+	if writer.GetSmartBlankLines() {
+		t.Error("SetSmartBlankLines(false) failed")
+	}
+	
+	writer.SetEnforceLineWidth(true)
+	if !writer.GetEnforceLineWidth() {
+		t.Error("SetEnforceLineWidth(true) failed")
+	}
+	
+	writer.SetAlignComments(false)
+	if writer.GetAlignComments() {
+		t.Error("SetAlignComments(false) failed")
+	}
+	
+	writer.SetMinimizeBlankLines(true)
+	if !writer.GetMinimizeBlankLines() {
+		t.Error("SetMinimizeBlankLines(true) failed")
+	}
+}
