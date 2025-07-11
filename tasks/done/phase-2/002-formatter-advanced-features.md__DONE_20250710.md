@@ -52,10 +52,10 @@ func (f *Formatter) FormatContent(content []byte) ([]byte, error) {
 **Files to Modify**: `internal/formatter/writer.go`
 
 ### Task 4.4: Performance and Stability (2 hours)
-- [ ] Add memory efficiency improvements
-- [ ] Implement circular reference detection
-- [ ] Add maximum nesting depth protection
-- [ ] Stream-based processing for large files
+- [x] Add memory efficiency improvements
+- [x] Implement circular reference detection
+- [x] Add maximum nesting depth protection
+- [x] Stream-based processing for large files
 
 **Files to Modify**: `internal/formatter/formatter.go`, `internal/formatter/reorder.go`
 

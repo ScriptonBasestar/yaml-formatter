@@ -545,9 +545,14 @@ func (w *Writer) handleSmartBlankLines(lines []string) []string {
 	prevIndent := -1
 	lastLineWasNonBlank := false
 
-	for _, line := range lines {
+	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		currentIndent := w.getIndentationLevel(line)
+
+		// Skip leading blank lines
+		if i == 0 && trimmedLine == "" {
+			continue
+		}
 
 		// If the current line is blank
 		if trimmedLine == "" {
@@ -561,7 +566,7 @@ func (w *Writer) handleSmartBlankLines(lines []string) []string {
 
 		// If current line is not blank
 		// Add a blank line if indentation decreases (exiting a block) and it's not a top-level element
-		if prevIndent != -1 && currentIndent < prevIndent && lastLineWasNonBlank && currentIndent > 0 {
+		if prevIndent != -1 && currentIndent < prevIndent && lastLineWasNonBlank {
 			result = append(result, "")
 		}
 
