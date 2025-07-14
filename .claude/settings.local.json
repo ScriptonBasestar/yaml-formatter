@@ -10,7 +10,8 @@
       "Bash(xxd:*)",
       "Bash(go mod:*)",
       "Bash(go fmt:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(time go test ./...)"
     ],
     "deny": []
   }

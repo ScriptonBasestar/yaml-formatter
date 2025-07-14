@@ -1,27 +1,30 @@
 services:
-  web:
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-    image: myapp:latest
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - ./data:/app/data
-    
   db:
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: secret
+
     image: postgres:14
-    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   redis:
     image: redis:7
 
-volumes:
-  postgres_data:
+  web:
+    depends_on:
+      - db
+      - redis
+
+    environment:
+      NODE_ENV: production
+
+    image: myapp:latest
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./data:/app/data
 
 version: '3.8'
+volumes:
+  postgres_data:
