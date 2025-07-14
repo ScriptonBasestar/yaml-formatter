@@ -1,4 +1,3 @@
-version:
 services:
   build:
     context:
@@ -82,6 +81,8 @@ services:
   stop_grace_period:
   extends:
   profiles:
+
+version:
 
 volumes:
   driver:
