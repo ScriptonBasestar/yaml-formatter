@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-integration test-e2e test-fast test-ci test-full test-smoke coverage clean
+.PHONY: build test test-unit test-integration test-e2e test-fast test-ci test-full test-smoke test-parallel coverage clean
 
 # Binary name
 BINARY_NAME=sb-yaml
@@ -43,6 +43,36 @@ test-smoke: build-test
 # Build test binary for smoke tests
 build-test:
 	go build -o yaml-formatter-test .
+
+# Parallel test execution targets
+
+# Run tests in parallel with automatic optimization
+test-parallel:
+	./scripts/parallel-test.sh
+
+# Run unit tests in parallel
+test-parallel-unit:
+	./scripts/parallel-test.sh -m unit
+
+# Run integration tests in parallel
+test-parallel-integration:
+	./scripts/parallel-test.sh -m integration
+
+# Run E2E tests in parallel
+test-parallel-e2e:
+	./scripts/parallel-test.sh -m e2e
+
+# Run all tests in parallel with category-specific optimization
+test-parallel-all:
+	./scripts/parallel-test.sh -m all
+
+# Run parallel tests with verbose output
+test-parallel-verbose:
+	./scripts/parallel-test.sh -v
+
+# Run parallel tests with race detection disabled (for performance)
+test-parallel-fast:
+	./scripts/parallel-test.sh --no-race
 
 # Run tests with coverage
 coverage:
