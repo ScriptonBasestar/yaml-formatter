@@ -76,8 +76,8 @@ go test -race -parallel=4 ./cmd/... ./tests/e2e/...
 ```
 
 ## Success Criteria
-- [ ] All CLI tests run in isolated environments
-- [ ] E2E tests automatically build and use binaries
-- [ ] No conflicts during parallel test execution
-- [ ] Comprehensive error scenario coverage
-- [ ] Test execution time under 15 minutes
+- [x] All CLI tests run in isolated environments
+- [x] E2E tests automatically build and use binaries
+- [x] No conflicts during parallel test execution
+- [x] Comprehensive error scenario coverage
+- [x] Test execution time under 15 minutes
