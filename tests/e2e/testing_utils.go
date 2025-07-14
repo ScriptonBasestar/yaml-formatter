@@ -1,9 +1,8 @@
-package testing_utils
+package e2e
 
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,7 +22,7 @@ type CLITestHarness struct {
 
 // NewCLITestHarness creates a new test harness
 func NewCLITestHarness(t *testing.T) *CLITestHarness {
-	tempDir, err := ioutil.TempDir("", "yaml-formatter-test-")
+	tempDir, err := os.MkdirTemp("", "yaml-formatter-test-")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -45,6 +44,11 @@ func NewCLITestHarness(t *testing.T) *CLITestHarness {
 	cmd.Dir = originalWD // Build from the project root
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Failed to build CLI binary: %v\nOutput: %s", err, output)
+	}
+
+	// Set executable permissions
+	if err := os.Chmod(binaryPath, 0755); err != nil {
+		t.Fatalf("Failed to set executable permissions: %v", err)
 	}
 
 	h := &CLITestHarness{
@@ -92,13 +96,13 @@ func (h *CLITestHarness) ExecuteCommand(args ...string) (string, string, error) 
 // CreateTestFile creates a file in the temporary test directory
 func (h *CLITestHarness) CreateTestFile(filename string, content string) error {
 	filePath := filepath.Join(h.tempDir, filename)
-	return ioutil.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
 // ReadTestFile reads a file from the temporary test directory
 func (h *CLITestHarness) ReadTestFile(filename string) (string, error) {
 	filePath := filepath.Join(h.tempDir, filename)
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}

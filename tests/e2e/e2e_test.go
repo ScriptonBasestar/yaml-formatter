@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"yaml-formatter/tests/e2e/testing_utils"
 )
 
 func TestE2EFullWorkflow(t *testing.T) {
@@ -204,13 +202,13 @@ func TestE2EWithTestData(t *testing.T) {
 			content: `key: value`,
 		},
 		{
-			name:    "complex-nested.yml",
+			name: "complex-nested.yml",
 			content: `parent:
   child:
     grandchild: value`,
 		},
 		{
-			name:    "with-comments.yml",
+			name: "with-comments.yml",
 			content: `# This is a comment
 key: value # Inline comment`,
 		},
