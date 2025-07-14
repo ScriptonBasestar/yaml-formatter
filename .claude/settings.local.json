@@ -11,7 +11,10 @@
       "Bash(go mod:*)",
       "Bash(go fmt:*)",
       "Bash(go vet:*)",
-      "Bash(time go test ./...)"
+      "Bash(time go test ./...)",
+      "WebFetch(domain:github.com)",
+      "Bash(go list:*)",
+      "Bash(go:*)"
     ],
     "deny": []
   }
