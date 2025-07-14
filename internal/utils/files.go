@@ -25,7 +25,7 @@ func NewFileHandler(filesystem afero.Fs) *FileHandler {
 // ExpandGlob expands glob patterns to actual file paths
 func (fh *FileHandler) ExpandGlob(patterns []string) ([]string, error) {
 	var files []string
-	
+
 	for _, pattern := range patterns {
 		matches, err := fh.expandSinglePattern(pattern)
 		if err != nil {
@@ -33,7 +33,7 @@ func (fh *FileHandler) ExpandGlob(patterns []string) ([]string, error) {
 		}
 		files = append(files, matches...)
 	}
-	
+
 	// Remove duplicates
 	return removeDuplicates(files), nil
 }
@@ -46,7 +46,7 @@ func (fh *FileHandler) expandSinglePattern(pattern string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Filter out directories and non-YAML files
 	var yamlFiles []string
 	for _, match := range matches {
@@ -54,12 +54,12 @@ func (fh *FileHandler) expandSinglePattern(pattern string) ([]string, error) {
 		if err != nil {
 			continue
 		}
-		
+
 		if !info.IsDir() && isYAMLFile(match) {
 			yamlFiles = append(yamlFiles, match)
 		}
 	}
-	
+
 	return yamlFiles, nil
 }
 
@@ -75,23 +75,23 @@ func (fh *FileHandler) WriteFile(path string, content []byte) error {
 	if err := fh.fs.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
-	
+
 	return afero.WriteFile(fh.fs, path, content, 0644)
 }
 
 // BackupFile creates a backup of a file
 func (fh *FileHandler) BackupFile(path string) (string, error) {
 	backupPath := path + ".bak"
-	
+
 	content, err := fh.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to read original file: %w", err)
 	}
-	
+
 	if err := fh.WriteFile(backupPath, content); err != nil {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
-	
+
 	return backupPath, nil
 }
 
@@ -116,7 +116,7 @@ func (fh *FileHandler) GetFileInfo(path string) (FileInfo, error) {
 	if err != nil {
 		return FileInfo{}, err
 	}
-	
+
 	return FileInfo{
 		Name:    info.Name(),
 		Size:    info.Size(),
@@ -158,14 +158,14 @@ func isYAMLFile(path string) bool {
 func removeDuplicates(slice []string) []string {
 	seen := make(map[string]bool)
 	var result []string
-	
+
 	for _, item := range slice {
 		if !seen[item] {
 			seen[item] = true
 			result = append(result, item)
 		}
 	}
-	
+
 	return result
 }
 
@@ -203,7 +203,7 @@ func (fh *FileHandler) GetAbsolutePath(path string) (string, error) {
 // ListYAMLFiles lists all YAML files in a directory
 func (fh *FileHandler) ListYAMLFiles(dir string, recursive bool) ([]string, error) {
 	var yamlFiles []string
-	
+
 	if recursive {
 		pattern := filepath.Join(dir, "**", "*.{yml,yaml}")
 		matches, err := fh.ExpandGlob([]string{pattern})
@@ -212,18 +212,18 @@ func (fh *FileHandler) ListYAMLFiles(dir string, recursive bool) ([]string, erro
 		}
 		return matches, nil
 	}
-	
+
 	// Non-recursive
 	entries, err := afero.ReadDir(fh.fs, dir)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, entry := range entries {
 		if !entry.IsDir() && isYAMLFile(entry.Name()) {
 			yamlFiles = append(yamlFiles, filepath.Join(dir, entry.Name()))
 		}
 	}
-	
+
 	return yamlFiles, nil
 }

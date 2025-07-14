@@ -1,0 +1,11 @@
+app:
+  name: test
+  services:
+    db:
+      type: postgres
+      config:
+        port: 5432
+    cache:
+      type: redis
+      config:
+        port: 6379

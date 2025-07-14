@@ -47,7 +47,7 @@ func extractKeysFromMap(m map[string]interface{}) []string {
 // buildOrderFromKeys recursively builds an order list from the Keys structure
 func buildOrderFromKeys(m map[string]interface{}, prefix string) []string {
 	var order []string
-	
+
 	// Process in a deterministic order
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -55,23 +55,23 @@ func buildOrderFromKeys(m map[string]interface{}, prefix string) []string {
 			keys = append(keys, k)
 		}
 	}
-	
+
 	for _, key := range keys {
 		value := m[key]
 		fullKey := key
 		if prefix != "" {
 			fullKey = prefix + "." + key
 		}
-		
+
 		order = append(order, fullKey)
-		
+
 		// If value is a map, recurse for nested structure
 		if subMap, ok := value.(map[string]interface{}); ok && len(subMap) > 0 {
 			subOrder := buildOrderFromKeys(subMap, fullKey)
 			order = append(order, subOrder...)
 		}
 	}
-	
+
 	return order
 }
 
@@ -87,15 +87,15 @@ func (s *Schema) GetKeyOrder(path string) []string {
 		}
 		return topLevel
 	}
-	
+
 	// Handle array index notation like "items[0]" -> "items"
 	cleanPath := path
 	if strings.Contains(path, "[") {
 		cleanPath = strings.Split(path, "[")[0]
 	}
-	
+
 	var result []string
-	
+
 	// Try regular nested path first
 	prefix := cleanPath + "."
 	for _, orderKey := range s.Order {
@@ -122,7 +122,7 @@ func (s *Schema) GetKeyOrder(path string) []string {
 			}
 		}
 	}
-	
+
 	// If no results and the original path had an array index, try array notation
 	if len(result) == 0 && strings.Contains(path, "[") {
 		arrayPrefix := cleanPath + "[*]."
@@ -151,7 +151,7 @@ func (s *Schema) GetKeyOrder(path string) []string {
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -160,7 +160,7 @@ func (s *Schema) IsNonSortKey(key string) bool {
 	if s.NonSort == nil {
 		return false
 	}
-	
+
 	nonSortKeys := s.NonSortKeys()
 	for _, nonSortKey := range nonSortKeys {
 		if key == nonSortKey {
@@ -175,22 +175,22 @@ func (s *Schema) Validate() error {
 	if s == nil {
 		return fmt.Errorf("schema is nil")
 	}
-	
+
 	if s.Name == "" {
 		return fmt.Errorf("schema name cannot be empty")
 	}
-	
+
 	if s.Keys == nil || len(s.Keys) == 0 {
 		return fmt.Errorf("schema must have at least one key defined")
 	}
-	
+
 	if len(s.Order) == 0 {
 		return fmt.Errorf("schema order is empty")
 	}
-	
+
 	// Check for circular references or other validation rules
 	// TODO: Implement more comprehensive validation
-	
+
 	return nil
 }
 
@@ -209,18 +209,18 @@ func GenerateFromYAML(yamlData []byte, name string) (*Schema, error) {
 	if err := yaml.Unmarshal(yamlData, &node); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
+
 	schema := &Schema{
-		Name: name,
-		Keys: make(map[string]interface{}),
+		Name:  name,
+		Keys:  make(map[string]interface{}),
 		Order: []string{},
 	}
-	
+
 	// Extract order and structure directly from the YAML node
 	if len(node.Content) > 0 {
 		extractSchemaOrder(node.Content[0], "", &schema.Order, schema.Keys)
 	}
-	
+
 	return schema, nil
 }
 
@@ -229,13 +229,13 @@ func extractSchemaFromNode(node *yaml.Node, target map[string]interface{}) {
 	if node.Kind != yaml.MappingNode {
 		return
 	}
-	
+
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valueNode := node.Content[i+1]
-		
+
 		key := keyNode.Value
-		
+
 		switch valueNode.Kind {
 		case yaml.MappingNode:
 			// Nested mapping
@@ -267,18 +267,18 @@ func LoadFromBytes(data []byte, name string) (*Schema, error) {
 	if err := yaml.Unmarshal(data, &node); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal schema: %w", err)
 	}
-	
+
 	schema := &Schema{
 		Name:  name,
 		Keys:  make(map[string]interface{}),
 		Order: []string{},
 	}
-	
+
 	// Extract schema structure from YAML node
 	if len(node.Content) > 0 {
 		extractSchemaOrder(node.Content[0], "", &schema.Order, schema.Keys)
 	}
-	
+
 	return schema, nil
 }
 
@@ -289,19 +289,19 @@ func extractSchemaOrder(node *yaml.Node, prefix string, order *[]string, keys ma
 		for i := 0; i < len(node.Content); i += 2 {
 			keyNode := node.Content[i]
 			valueNode := node.Content[i+1]
-			
+
 			key := keyNode.Value
 			if key == "non_sort" {
 				continue
 			}
-			
+
 			fullKey := key
 			if prefix != "" {
 				fullKey = prefix + "." + key
 			}
-			
+
 			*order = append(*order, fullKey)
-			
+
 			if valueNode.Kind == yaml.MappingNode {
 				// Nested mapping
 				nestedKeys := make(map[string]interface{})
@@ -314,7 +314,7 @@ func extractSchemaOrder(node *yaml.Node, prefix string, order *[]string, keys ma
 					// Extract structure from first array element
 					for j := 0; j < len(valueNode.Content[0].Content); j += 2 {
 						elemKey := valueNode.Content[0].Content[j].Value
-						*order = append(*order, fullKey + "[*]." + elemKey)
+						*order = append(*order, fullKey+"[*]."+elemKey)
 						nestedKeys[elemKey] = nil
 					}
 					keys[key] = nestedKeys
@@ -334,7 +334,7 @@ func DefaultSchemaName(filePath string) string {
 	base := filepath.Base(filePath)
 	ext := filepath.Ext(base)
 	name := strings.TrimSuffix(base, ext)
-	
+
 	// Convert common patterns to schema names
 	switch {
 	case strings.Contains(name, "docker-compose"):

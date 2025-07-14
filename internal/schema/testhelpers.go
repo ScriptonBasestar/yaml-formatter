@@ -10,13 +10,13 @@ func CreateTestSchema(name string, keys []string) *Schema {
 		Keys:  make(map[string]interface{}),
 		Order: make([]string, len(keys)),
 	}
-	
+
 	// Set up the keys and order
 	copy(schema.Order, keys)
 	for _, key := range keys {
 		schema.Keys[key] = nil
 	}
-	
+
 	return schema
 }
 
@@ -124,7 +124,7 @@ func CreateMinimalTestSchema() *Schema {
 		},
 		Order: []string{
 			"name",
-			"version", 
+			"version",
 			"description",
 		},
 	}

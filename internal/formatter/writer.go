@@ -688,7 +688,7 @@ func (w *Writer) normalizeIndentation(line string) string {
 	// Calculate proper indentation level
 	indentLevel := leadingSpaces / w.indent
 	properIndent := strings.Repeat(" ", indentLevel*w.indent)
-	
+
 	// Replace leading whitespace with proper indentation
 	trimmed := strings.TrimLeft(line, " \t")
 	return properIndent + trimmed
@@ -702,15 +702,15 @@ func (w *Writer) wrapLongLine(line string) []string {
 
 	// For YAML, we're conservative about line wrapping
 	// Only wrap at safe points like after commas in arrays/objects
-	
+
 	indent := w.getIndentationLevel(line)
 	indentStr := strings.Repeat(" ", indent)
-	
+
 	// Try to find safe wrap points
 	if strings.Contains(line, ", ") {
 		return w.wrapAtCommas(line, indentStr)
 	}
-	
+
 	// If no safe wrap points, return as-is to avoid breaking YAML
 	return []string{line}
 }
@@ -719,7 +719,7 @@ func (w *Writer) wrapLongLine(line string) []string {
 func (w *Writer) wrapAtCommas(line string, indentStr string) []string {
 	var result []string
 	parts := strings.Split(line, ", ")
-	
+
 	currentLine := parts[0]
 	for i := 1; i < len(parts); i++ {
 		testLine := currentLine + ", " + parts[i]
@@ -730,11 +730,11 @@ func (w *Writer) wrapAtCommas(line string, indentStr string) []string {
 			currentLine = indentStr + strings.Repeat(" ", w.indent) + parts[i]
 		}
 	}
-	
+
 	if currentLine != "" {
 		result = append(result, currentLine)
 	}
-	
+
 	return result
 }
 
@@ -743,7 +743,7 @@ func (w *Writer) hasInlineComment(line string) bool {
 	// Look for # not inside quotes
 	inQuotes := false
 	var quoteChar rune
-	
+
 	for i, char := range line {
 		if !inQuotes && (char == '"' || char == '\'') {
 			inQuotes = true
@@ -754,14 +754,14 @@ func (w *Writer) hasInlineComment(line string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 // calculateOptimalCommentColumn calculates the best column for aligning comments
 func (w *Writer) calculateOptimalCommentColumn(lines []string) int {
 	maxContentLength := 0
-	
+
 	for _, line := range lines {
 		if w.hasInlineComment(line) {
 			commentPos := w.findCommentPosition(line)
@@ -770,7 +770,7 @@ func (w *Writer) calculateOptimalCommentColumn(lines []string) int {
 			}
 		}
 	}
-	
+
 	// Align to the next multiple of indent size after max content
 	return ((maxContentLength / w.indent) + 1) * w.indent
 }
@@ -779,7 +779,7 @@ func (w *Writer) calculateOptimalCommentColumn(lines []string) int {
 func (w *Writer) findCommentPosition(line string) int {
 	inQuotes := false
 	var quoteChar rune
-	
+
 	for i, char := range line {
 		if !inQuotes && (char == '"' || char == '\'') {
 			inQuotes = true
@@ -790,7 +790,7 @@ func (w *Writer) findCommentPosition(line string) int {
 			return i
 		}
 	}
-	
+
 	return len(line)
 }
 
@@ -800,16 +800,16 @@ func (w *Writer) alignInlineComment(line string, column int) string {
 	if commentPos >= len(line) {
 		return line
 	}
-	
+
 	content := strings.TrimRight(line[:commentPos], " \t")
 	comment := line[commentPos:]
-	
+
 	// Calculate spaces needed
 	spacesNeeded := column - len(content)
 	if spacesNeeded < 1 {
 		spacesNeeded = 1
 	}
-	
+
 	return content + strings.Repeat(" ", spacesNeeded) + comment
 }
 

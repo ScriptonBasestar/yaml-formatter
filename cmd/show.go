@@ -13,9 +13,9 @@ var showCmd = &cobra.Command{
 }
 
 var showGitHookCmd = &cobra.Command{
-	Use:   "git-pre-commit-hook",
-	Short: "Show Git pre-commit hook configuration",
-	Long:  `Display a pre-commit hook configuration that can be used to automatically format YAML files`,
+	Use:     "git-pre-commit-hook",
+	Short:   "Show Git pre-commit hook configuration",
+	Long:    `Display a pre-commit hook configuration that can be used to automatically format YAML files`,
 	Example: `  sb-yaml show git-pre-commit-hook > .pre-commit-config.yaml`,
 	Run: func(cmd *cobra.Command, args []string) {
 		hookConfig := `# .pre-commit-config.yaml

@@ -10,32 +10,32 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	v               *viper.Viper
-	SchemaDir       string `mapstructure:"schema_dir"`
-	DefaultIndent   int    `mapstructure:"default_indent"`
-	DefaultLineWidth int   `mapstructure:"default_line_width"`
-	PreserveComments bool  `mapstructure:"preserve_comments"`
-	Verbose         bool   `mapstructure:"verbose"`
+	v                *viper.Viper
+	SchemaDir        string `mapstructure:"schema_dir"`
+	DefaultIndent    int    `mapstructure:"default_indent"`
+	DefaultLineWidth int    `mapstructure:"default_line_width"`
+	PreserveComments bool   `mapstructure:"preserve_comments"`
+	Verbose          bool   `mapstructure:"verbose"`
 }
 
 // Default configuration values
 const (
-	DefaultIndent          = 2
-	DefaultLineWidth       = 80
+	DefaultIndent           = 2
+	DefaultLineWidth        = 80
 	DefaultPreserveComments = true
-	DefaultSchemaDir       = ".sb-yaml/schemas"
+	DefaultSchemaDir        = ".sb-yaml/schemas"
 )
 
 // NewConfig creates a new configuration with defaults
 func NewConfig() *Config {
 	v := viper.New()
-	
+
 	// Set defaults
 	v.SetDefault("default_indent", DefaultIndent)
 	v.SetDefault("default_line_width", DefaultLineWidth)
 	v.SetDefault("preserve_comments", DefaultPreserveComments)
 	v.SetDefault("verbose", false)
-	
+
 	// Set default schema directory
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -43,11 +43,11 @@ func NewConfig() *Config {
 	}
 	defaultSchemaDir := filepath.Join(home, DefaultSchemaDir)
 	v.SetDefault("schema_dir", defaultSchemaDir)
-	
+
 	// Environment variables
 	v.SetEnvPrefix("SB_YAML")
 	v.AutomaticEnv()
-	
+
 	config := &Config{
 		v:                v,
 		SchemaDir:        v.GetString("schema_dir"),
@@ -56,7 +56,7 @@ func NewConfig() *Config {
 		PreserveComments: v.GetBool("preserve_comments"),
 		Verbose:          v.GetBool("verbose"),
 	}
-	
+
 	return config
 }
 
@@ -67,7 +67,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("default_line_width", DefaultLineWidth)
 	viper.SetDefault("preserve_comments", DefaultPreserveComments)
 	viper.SetDefault("verbose", false)
-	
+
 	// Set default schema directory
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -75,21 +75,21 @@ func Load() (*Config, error) {
 	}
 	defaultSchemaDir := filepath.Join(home, DefaultSchemaDir)
 	viper.SetDefault("schema_dir", defaultSchemaDir)
-	
+
 	// Environment variables
 	viper.SetEnvPrefix("SB_YAML")
 	viper.AutomaticEnv()
-	
+
 	// Config file settings
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	
+
 	// Add config paths
 	viper.AddConfigPath(".")
 	viper.AddConfigPath(filepath.Join(home, ".sb-yaml"))
 	viper.AddConfigPath(home)
 	viper.AddConfigPath("/etc/sb-yaml/")
-	
+
 	// Read config file if it exists
 	if err := viper.ReadInConfig(); err != nil {
 		// Config file not found is not an error
@@ -97,20 +97,20 @@ func Load() (*Config, error) {
 			return nil, err
 		}
 	}
-	
+
 	config := &Config{
 		v: viper.GetViper(),
 	}
-	
+
 	if err := viper.Unmarshal(config); err != nil {
 		return nil, err
 	}
-	
+
 	// Expand home directory in schema_dir if needed
 	if len(config.SchemaDir) > 0 && config.SchemaDir[0] == '~' {
 		config.SchemaDir = filepath.Join(home, config.SchemaDir[1:])
 	}
-	
+
 	return config, nil
 }
 
@@ -121,7 +121,7 @@ func (c *Config) Save() error {
 	viper.Set("default_line_width", c.DefaultLineWidth)
 	viper.Set("preserve_comments", c.PreserveComments)
 	viper.Set("verbose", c.Verbose)
-	
+
 	return viper.WriteConfig()
 }
 
@@ -186,19 +186,19 @@ func (c *Config) Validate() error {
 		}
 		c.SchemaDir = c.v.GetString("schema_dir")
 	}
-	
+
 	if c.DefaultIndent < 1 {
 		return fmt.Errorf("default_indent must be at least 1")
 	}
-	
+
 	if c.DefaultLineWidth < 0 {
 		return fmt.Errorf("default_line_width cannot be negative")
 	}
-	
+
 	if c.SchemaDir == "" {
 		return fmt.Errorf("schema_dir cannot be empty")
 	}
-	
+
 	return nil
 }
 
@@ -218,7 +218,7 @@ func (c *Config) LoadDefaults() {
 	c.DefaultLineWidth = DefaultLineWidth
 	c.PreserveComments = DefaultPreserveComments
 	c.Verbose = false
-	
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "."
@@ -229,20 +229,20 @@ func (c *Config) LoadDefaults() {
 // LoadFromFile loads configuration from a specific file
 func (c *Config) LoadFromFile(path string) error {
 	c.v.SetConfigFile(path)
-	
+
 	if err := c.v.ReadInConfig(); err != nil {
 		return err
 	}
-	
+
 	if err := c.v.Unmarshal(c); err != nil {
 		return err
 	}
-	
+
 	// Handle line_width alias
 	if c.v.IsSet("line_width") {
 		c.DefaultLineWidth = c.v.GetInt("line_width")
 	}
-	
+
 	return nil
 }
 
@@ -253,7 +253,7 @@ func (c *Config) SaveToFile(path string) error {
 	c.v.Set("default_line_width", c.DefaultLineWidth)
 	c.v.Set("preserve_comments", c.PreserveComments)
 	c.v.Set("verbose", c.Verbose)
-	
+
 	return c.v.WriteConfigAs(path)
 }
 

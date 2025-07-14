@@ -37,7 +37,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.sb-yaml.yaml)")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
-	
+
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 }
 

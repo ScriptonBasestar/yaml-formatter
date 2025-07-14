@@ -1,3 +1,5 @@
+//go:build integration
+
 package cmd
 
 import (
@@ -9,8 +11,8 @@ import (
 )
 
 func TestSchemaGenCommand(t *testing.T) {
-	h := NewCLITestHarness(t)
-	h.Chdir()
+	h := e2e.NewE2ETestHarness(t)
+	h.ChangeToTempDir()
 
 	yamlContent := `name: test
 version: 1.0.0
@@ -24,14 +26,20 @@ metadata:
 	}
 
 	// Check output contains expected schema structure
-	AssertOutputContains(t, stdout, "name:")
-	AssertOutputContains(t, stdout, "version:")
-	AssertOutputContains(t, stdout, "metadata:")
+	if !strings.Contains(stdout, "name:") {
+		t.Errorf("Expected stdout to contain 'name:', got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "version:") {
+		t.Errorf("Expected stdout to contain 'version:', got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "metadata:") {
+		t.Errorf("Expected stdout to contain 'metadata:', got: %s", stdout)
+	}
 }
 
 func TestSchemaSetCommand(t *testing.T) {
-	h := NewCLITestHarness(t)
-	h.Chdir()
+	h := e2e.NewE2ETestHarness(t)
+	h.ChangeToTempDir()
 
 	schemaContent := `name:
 version:
@@ -45,15 +53,23 @@ description:`
 		t.Errorf("Schema set command failed: %v\nStderr: %s", err, stderr)
 	}
 
-	AssertOutputContains(t, stdout, "saved successfully")
+	if !strings.Contains(stdout, "saved successfully") {
+		t.Errorf("Expected stdout to contain 'saved successfully', got: %s", stdout)
+	}
 
 	// Verify schema was saved
-	AssertFileContentEquals(t, h, filepath.Join("schemas", "test-schema.yaml"), schemaContent)
+	actualContent, err := h.ReadTestFile(filepath.Join("schemas", "test-schema.yaml"))
+	if err != nil {
+		t.Fatalf("Failed to read schema file: %v", err)
+	}
+	if actualContent != schemaContent {
+		t.Errorf("Expected schema content:\n%s\nGot:\n%s", schemaContent, actualContent)
+	}
 }
 
 func TestSchemaSetFromYAML(t *testing.T) {
-	h := NewCLITestHarness(t)
-	h.Chdir()
+	h := e2e.NewE2ETestHarness(t)
+	h.ChangeToTempDir()
 
 	yamlContent := `apiVersion: v1
 kind: ConfigMap
@@ -68,12 +84,14 @@ metadata:
 		t.Errorf("Schema set --from-yaml command failed: %v\nStderr: %s", err, stderr)
 	}
 
-	e2e.AssertOutputContains(t, stdout, "generated from")
+	if !strings.Contains(stdout, "generated from") {
+		t.Errorf("Expected stdout to contain 'generated from', got: %s", stdout)
+	}
 }
 
 func TestSchemaListCommand(t *testing.T) {
-	h := NewCLITestHarness(t)
-	h.Chdir()
+	h := e2e.NewE2ETestHarness(t)
+	h.ChangeToTempDir()
 
 	// Create test schema files
 	schemas := []string{"schema1.yaml", "schema2.yaml", "schema3.yaml"}
@@ -91,10 +109,18 @@ version:`
 	}
 
 	// Check for expected schemas
-	AssertOutputContains(t, stdout, "schema1")
-	AssertOutputContains(t, stdout, "schema2")
-	AssertOutputContains(t, stdout, "schema3")
-		testing_utils.AssertOutputContains(t, stdout, "Available schemas (3)")
+	if !strings.Contains(stdout, "schema1") {
+		t.Errorf("Expected stdout to contain 'schema1', got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "schema2") {
+		t.Errorf("Expected stdout to contain 'schema2', got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "schema3") {
+		t.Errorf("Expected stdout to contain 'schema3', got: %s", stdout)
+	}
+	if !strings.Contains(stdout, "Available schemas (3)") {
+		t.Errorf("Expected stdout to contain 'Available schemas (3)', got: %s", stdout)
+	}
 }
 
 func TestSchemaCommandErrors(t *testing.T) {
@@ -132,8 +158,8 @@ func TestSchemaCommandErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewCLITestHarness(t)
-			h.Chdir()
+			h := e2e.NewE2ETestHarness(t)
+			h.ChangeToTempDir()
 			t.Setenv("SB_YAML_SCHEMA_DIR", h.GetSchemaDir())
 
 			_, stderr, err := h.ExecuteCommand(tt.args...)

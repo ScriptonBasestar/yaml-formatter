@@ -10,16 +10,16 @@ import (
 
 // Reorderer handles reordering YAML nodes according to a schema
 type Reorderer struct {
-	schema *schema.Schema
-	parser *Parser
+	schema   *schema.Schema
+	parser   *Parser
 	maxDepth int
 }
 
 // NewReorderer creates a new YAML reorderer
 func NewReorderer(s *schema.Schema, p *Parser) *Reorderer {
 	return &Reorderer{
-		schema: s,
-		parser: p,
+		schema:   s,
+		parser:   p,
 		maxDepth: 100, // Default max depth
 	}
 }

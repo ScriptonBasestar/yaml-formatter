@@ -3,6 +3,7 @@ package schema
 import "embed"
 
 // Embedded test data for schema testing
+//
 //go:embed testdata/*.yml
 var TestDataFS embed.FS
 
@@ -107,7 +108,7 @@ func GetFormattedTestData(key, schemaType string) (input, expected []byte) {
 	if input == nil {
 		return nil, nil
 	}
-	
+
 	// For now, return the same data as both input and expected
 	// In a real implementation, this would apply the schema formatting
 	expected = input

@@ -26,7 +26,7 @@ var schemaGenCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		schemaName := args[0]
 		yamlFile := args[1]
-		
+
 		if err := generateSchema(schemaName, yamlFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -44,7 +44,7 @@ var schemaSetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		schemaName := args[0]
 		schemaFile := args[1]
-		
+
 		if err := setSchema(schemaName, schemaFile, fromYaml); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -53,9 +53,9 @@ var schemaSetCmd = &cobra.Command{
 }
 
 var schemaListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all saved schemas",
-	Long:  `Display all schemas that have been saved and are available for formatting`,
+	Use:     "list",
+	Short:   "List all saved schemas",
+	Long:    `Display all schemas that have been saved and are available for formatting`,
 	Example: `  sb-yaml schema list`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := listSchemas(); err != nil {
@@ -79,22 +79,22 @@ func init() {
 // generateSchema generates a schema from a YAML file and outputs it to stdout
 func generateSchema(schemaName, yamlFile string) error {
 	fileHandler := utils.NewFileHandler(nil)
-	
+
 	// Read the YAML file
 	content, err := fileHandler.ReadFile(yamlFile)
 	if err != nil {
 		return fmt.Errorf("failed to read YAML file: %w", err)
 	}
-	
+
 	// Generate schema
 	s, err := schema.GenerateFromYAML(content, schemaName)
 	if err != nil {
 		return fmt.Errorf("failed to generate schema: %w", err)
 	}
-	
+
 	// Output schema to stdout
 	fmt.Print(s.String())
-	
+
 	return nil
 }
 
@@ -104,16 +104,16 @@ func setSchema(schemaName, schemaFile string, fromYaml bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	loader := schema.NewLoader(nil, cfg.GetSchemaDir())
-	
+
 	if fromYaml {
 		// Generate schema from YAML file and save it
 		s, err := loader.GenerateAndSaveFromYAML(schemaFile, schemaName)
 		if err != nil {
 			return fmt.Errorf("failed to generate and save schema from YAML: %w", err)
 		}
-		
+
 		fmt.Printf("Schema '%s' generated from '%s' and saved successfully\n", s.Name, schemaFile)
 	} else {
 		// Load schema from file and save it
@@ -121,19 +121,19 @@ func setSchema(schemaName, schemaFile string, fromYaml bool) error {
 		if err != nil {
 			return fmt.Errorf("failed to load schema from file: %w", err)
 		}
-		
+
 		// Update the name if provided
 		if s.Name != schemaName {
 			s.Name = schemaName
 		}
-		
+
 		if err := loader.SaveSchema(s); err != nil {
 			return fmt.Errorf("failed to save schema: %w", err)
 		}
-		
+
 		fmt.Printf("Schema '%s' saved successfully\n", s.Name)
 	}
-	
+
 	return nil
 }
 
@@ -143,25 +143,25 @@ func listSchemas() error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	loader := schema.NewLoader(nil, cfg.GetSchemaDir())
-	
+
 	schemas, err := loader.ListSchemas()
 	if err != nil {
 		return fmt.Errorf("failed to list schemas: %w", err)
 	}
-	
+
 	if len(schemas) == 0 {
 		fmt.Println("No schemas found.")
 		fmt.Printf("Schema directory: %s\n", cfg.GetSchemaDir())
 		return nil
 	}
-	
+
 	fmt.Printf("Available schemas (%d):\n", len(schemas))
 	for _, name := range schemas {
 		fmt.Printf("  - %s\n", name)
 	}
 	fmt.Printf("\nSchema directory: %s\n", cfg.GetSchemaDir())
-	
+
 	return nil
 }

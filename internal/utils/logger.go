@@ -29,7 +29,7 @@ func NewLogger(level LogLevel, output io.Writer) *Logger {
 	if output == nil {
 		output = os.Stderr
 	}
-	
+
 	return &Logger{
 		level:  level,
 		output: output,
@@ -43,7 +43,7 @@ func NewDefaultLogger(verbose bool) *Logger {
 	if verbose {
 		level = LogLevelDebug
 	}
-	
+
 	return NewLogger(level, os.Stderr)
 }
 
@@ -88,10 +88,10 @@ func (l *Logger) log(level LogLevel, levelStr, format string, args ...interface{
 	if level < l.level {
 		return
 	}
-	
+
 	message := fmt.Sprintf(format, args...)
 	logLine := fmt.Sprintf("%s%s: %s\n", l.prefix, levelStr, message)
-	
+
 	fmt.Fprint(l.output, logLine)
 }
 

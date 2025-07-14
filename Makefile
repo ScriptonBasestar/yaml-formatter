@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-integration test-e2e coverage clean
+.PHONY: build test test-unit test-integration test-e2e test-fast test-ci test-full test-smoke coverage clean
 
 # Binary name
 BINARY_NAME=sb-yaml
@@ -7,20 +7,42 @@ BINARY_NAME=sb-yaml
 build:
 	go build -o $(BINARY_NAME) .
 
-# Run all tests
-test: test-unit test-integration test-e2e
+# Run all tests (default to CI mode for comprehensive testing)
+test: test-ci
 
 # Run unit tests
 test-unit:
-	go test ./internal/...
+	go test -short ./internal/...
 
-# Run integration tests
+# Run integration tests (requires integration tag)
 test-integration:
-	go test ./cmd/...
+	go test -short -tags=integration ./cmd/...
 
-# Run end-to-end tests (requires built binary)
-test-e2e: build
-	go test ./tests/e2e/...
+# Run end-to-end tests (requires e2e tag and built binary)
+test-e2e: build-test
+	go test -tags=e2e ./tests/e2e/...
+
+# Categorized test targets using test-categories.sh script
+
+# Fast tests (unit only) - for development
+test-fast:
+	./scripts/test-categories.sh -m fast
+
+# CI tests (unit + integration) - for PR validation
+test-ci:
+	./scripts/test-categories.sh -m ci
+
+# Full tests (all tests) - for releases
+test-full:
+	./scripts/test-categories.sh -m full
+
+# Smoke tests - for post-deployment validation
+test-smoke: build-test
+	./scripts/test-categories.sh -m smoke
+
+# Build test binary for smoke tests
+build-test:
+	go build -o yaml-formatter-test .
 
 # Run tests with coverage
 coverage:
